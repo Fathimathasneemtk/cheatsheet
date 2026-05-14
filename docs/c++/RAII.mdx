@@ -25,7 +25,7 @@ public:
   ManagedPtr(const ManagedPtr &other) = delete;
   ManagedPtr& operator=(const ManagedPtr& other) = delete;
 
-  ManagedPtr(ManagedPtr&& other): m_Ptr(nullptr) {
+  ManagedPtr(ManagedPtr&& other) noexcept: m_Ptr(nullptr) {
     std::swap(m_Ptr, other.m_Ptr);
   };
 
@@ -47,3 +47,14 @@ public:
 ```
 
 Notice how the **Rule of 5** was covered for here. Copy & move constructor and assigment were deleted.
+
+:::note
+A Note on `noexcept`
+
+You should always mark move constructors and move assignment operators as **`noexcept`**. 
+
+Standard library containers (like `std::vector`) are designed to be "exception-safe." If a move operation could potentially throw an exception during a resize, the vector will default to a **slow copy** instead of a move. This ensures that if the operation fails halfway through, the original data remains untouched. 
+
+Since swapping pointers in an RAII object like `ManagedPtr` is guaranteed not to throw, marking it `noexcept` signals the compiler that it's safe to use the **high-performance move logic**.
+:::
+
