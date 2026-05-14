@@ -25,13 +25,13 @@ class Policy
 class IPolicy
 {
   virtual ~IPolicy() = default;
-  virtual void apply() = 0;
+  virtual void apply(const User &user) = 0;
 }
 
 // New features are added here, open for extension
 class RemoteWorkPolicy : public IPolicy {
-  void apply() override {
-    // Business logic
+  void apply(const User &user) override {
+    // Business logic...
   }
 };
 
@@ -42,11 +42,125 @@ class Attandance
 
   Attendance(IPolicy* policy) : m_Policy(policy) {}
 
-  void markAttandance(User &user)
+  void markAttandance(const User &user)
   {
     if(!policy) throw std::runtime_exception("Unexpected");
 
-    policy.apply();
+    policy.apply(user);
   }
 }
 ```
+
+### Liskov Substitution Principle
+* If \(S\) is a subtype of \(T\), then objects of type \(T\) should be replaceable with objects of type \(S\) without breaking the application.
+* **The Square-Rectangle problem**: If a Square inherits from Rectangle but throws an error when you try to set the width and height to different values, it violates LSP. Code expecting a Rectangle might behave incorrectly when passed a Square.
+* **Principle of Least Astonishment**: If a function takes an `IPolicy*`, it should be able to use any subclass without needing to check which one it is or handling unexpected "Not Implemented" errors.
+
+**Violation of LSP**:
+```cpp
+class IPolicy {
+public:
+  virtual ~IPolicy() = default;
+  virtual void apply(const User& user) = 0;
+};
+
+// It only works for Admin users, otherwise it crashes/throws.
+class AdminOnlyPolicy : public IPolicy {
+public:
+  void apply(const User& user) override {
+    if (!user.isAdmin()) {
+      // This violates LSP because the caller of IPolicy 
+      // doesn't expect apply() to fail based on user type.
+      throw std::runtime_error("LSP Broken: Unexpected user type!");
+    }
+
+    // Business logic...
+  }
+};
+```
+
+The base contract:
+```cpp
+  virtual void apply(const User& user) = 0;
+```
+implies:
+  * Any `User` is valid input.
+  * Callers should be able to pass **any** `User` to any `IPolicy`.
+
+But `AdminOnlyPolicy` secretly strengthens the precondition:
+```cpp
+if (!user.isAdmin())
+```
+
+Now the function only accepts a subset of `User`.
+
+That means code like this becomes unsafe:
+
+```cpp
+void runPolicy(IPolicy& policy, const User& user) {
+  policy.apply(user);
+}
+```
+
+**One possible solution to this problem**:
+```cpp
+class IPolicy {
+public:
+    virtual ~IPolicy() = default;
+    
+    // We define a new method, it returns false if it's not applicable
+    virtual bool canApply(const User& user) const = 0;
+    virtual void apply(const User& user) = 0;
+};
+
+class AdminOnlyPolicy : public IPolicy {
+public:
+  bool canApply(const User& user) const override {
+    return !user.isAdmin(); // Explicitly states its limits
+  }
+
+  void apply(const User& user) override {
+    // We know this is safe because the caller checks canApply first
+    user.setPermissions(LOW);
+  }
+};
+
+// The consumer can now use any IPolicy safely
+void processAttendance(User& user, IPolicy* policy) {
+  if (policy->canApply(user))
+    policy->apply(user); // No surprises here
+}
+```
+
+Make rejection part of the base contract:
+```cpp
+virtual bool canApply(const User& user) const = 0;
+```
+Then callers know rejection is normal behavior rather than a broken substitution.
+
+### Interface Segregation Principle
+* No client should be forced to depend on methods it does not use.
+* **Splitting the "Fat Interface"**: Instead of one massive `IPolicy` that handles `attendance`, `payroll`, and `security`, you split them into smaller, focused interfaces.
+* This prevents **"Side-Effect Recompilation."** If you change a payroll method in a giant interface, your attendance module (which doesn't care about payroll) still has to recompile.
+
+```cpp
+// A "Fat" Interface
+class IEmployeeActions {
+  virtual void calculatePay() = 0; // for Accountant
+  virtual void writeCode() = 0;    // for Developer - Why does the Accountant need this?
+};
+
+// Segregated Interfaces
+class IDeveloper {
+  virtual void writeCode() = 0;
+};
+
+class IAccountant {
+  virtual void calculatePay() = 0;
+};
+```
+
+### Dependency Inversion Principle
+* High-level modules should not depend on low-level modules. Both should depend on abstractions.
+* `Attendance` class (high-level) shouldn't know about `WiFiPolicy` or `FingerprintPolicy` (low-level details). It only knows about `IPolicy` (the abstraction).
+* This is the ultimate goal of the previous four principles. It allows you to swap out a database, a UI framework, or a business rule without touching the core orchestration logic.

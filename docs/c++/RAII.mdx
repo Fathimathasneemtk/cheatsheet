@@ -1,0 +1,49 @@
+# RAII
+Resource acquisition is initialization
+
+### What is it?
+* It ties the lifetime of a resource to the lifetime of a stack object.
+* An object should be responsible for any resource it creates.
+* All resources should be aquired in the constructor and released in the destructor
+
+### The Three Pillars of RAII
+* **Acquisition**: The resource (memory, file handle, mutex lock) is acquired in the constructor. If acquisition fails, the constructor throws an exception, and the object is never considered "alive."
+* **Ownership**: The object "owns" the resource for its entire lifespan.
+* **Release**: The resource is automatically released in the destructor.
+
+```cpp
+template <typename T>
+class ManagedPtr
+{
+private:
+  T* m_Ptr;
+
+public:
+  template <typename... Args>
+  ManagedPtr(Args&&... args): m_Ptr(new T(std::forward<Args>(args)...)) {}
+
+  ManagedPtr(const ManagedPtr &other) = delete;
+  ManagedPtr& operator=(const ManagedPtr& other) = delete;
+
+  ManagedPtr(ManagedPtr&& other): m_Ptr(nullptr) {
+    std::swap(m_Ptr, other.m_Ptr);
+  };
+
+  ManagedPtr& operator=(ManagedPtr&& other) noexcept {
+    if(this != &other) {
+      delete m_Ptr;
+      m_Ptr = other.m_Ptr;
+      other.m_Ptr = nullptr;
+    }
+    return *this;
+  };
+
+  ~ManagedPtr() {
+    delete m_Ptr;
+  }
+
+  T* get() const { return m_Ptr; }
+}
+```
+
+Notice how the **Rule of 5** was covered for here. Copy & move constructor and assigment were deleted.
