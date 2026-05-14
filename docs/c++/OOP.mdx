@@ -1,0 +1,47 @@
+# The four pillars of OOP
+Is **OOP** good or bad? That's debatable. **OOP** is good at a higher granularity, however, at lower granularity, **Data oriented design (DOD)** is
+better.
+
+### Encapulation
+* A class is built to **encapsulate behaviour & state**
+* It exposes members through a well thought-out design.
+* To enforce encapulation we make use of **access specifiers**
+    * **private**: Only this class can access private members.
+    * **protected**: Only this class and derived classes can access these members.
+    * **public**: Members that are public are accessable outside the class.
+
+### Abstraction
+* A class should hide implementation while exposing only members that are required
+* To enforce this, we use **access specifiers**, **abstract classes**, **interfaces**.
+
+### Inheritance
+* **Common behaviour can be encapulated** into a base class. Derived classes can **inherite properties & behaviour** from it's base class.
+* Inheritance promotes **code reusability**
+
+### Polymorphism
+* Polymorphism means **many forms**.
+* There are two types of polymorphism. **Compile time** & **Runtime** polymorphism.
+    * **Compile-time Polymorphism**: Achieved via **Method Overloading** or **Operator Overloading**.
+    * **Runtime Polymorphism**: Achieved via **Function Overriding** using the **virtual** keyword. This allows a base class pointer to call the specific implementation of a derived class.
+```cpp
+class Animal 
+{
+    virtual ~Animal() {}
+
+    virtual void speak() { std::cout << "..." << std::endl; }
+}
+class Dog: public Animal 
+{
+    void speak() override { std::cout << "Bark" << std::endl; }
+}
+
+Animal* animal = &baseAnimal; // speak() should output "..."
+Dog dog;                      // speak() should output "Bark"
+
+animal = &dog;
+animal->speak(); // "Bark"
+```
+
+When you call `animal->speak();`, the program looks into the vtable (virtual table) for the `Dog` class and executes `Dog::speak()` Even though the `typeof(animal)` is `Animal`.
+
+This is runtime polymorphism

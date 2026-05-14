@@ -1,0 +1,52 @@
+# SOLID
+
+### Single responsibility principal
+* A class must not have more than one responsibility.
+* **Higher Cohesion**: The code inside the class actually belongs together.
+* **Lower Coupling**: Classes depend on each other less, making it safer to swap parts out.
+* **Testability**: It’s much easier to write a unit test for a class that only does one thing.
+* The **God Object** is the anti-pattern that **SRP** solves
+```cpp
+class Policy
+{
+    void apply();
+    void logoutUser(); // This is bad
+}
+```
+
+### Open/Close Principal
+* **Open for extension, closed for modification**
+* A class should not be modified once it has been written.
+* **Regression Bugs**: Breaking a feature that was working perfectly for months.
+* **Testability**: You don't have to retest everything since it is closed for modification.
+* **Merge Conflicts**: Multiple developers trying to edit the same core file for different features.
+```cpp
+// Closed for modification
+class IPolicy
+{
+  virtual ~IPolicy() = default;
+  virtual void apply() = 0;
+}
+
+// New features are added here, open for extension
+class RemoteWorkPolicy : public IPolicy {
+  void apply() override {
+    // Business logic
+  }
+};
+
+class Attandance
+{
+  // Open for extension through dependency injection
+  IPolicy* m_Policy;
+
+  Attendance(IPolicy* policy) : m_Policy(policy) {}
+
+  void markAttandance(User &user)
+  {
+    if(!policy) throw std::runtime_exception("Unexpected");
+
+    policy.apply();
+  }
+}
+```

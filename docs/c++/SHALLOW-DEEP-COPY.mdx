@@ -1,0 +1,55 @@
+# Shallow & deep copy
+### Shallow copy
+* When a class contains a member in which bitwise copy does not copy the associated memory, a shallow copy occurs.
+* This happens when the class has a member:
+    * **Raw pointer**: Points to memory on the heap. **This can be avoided by using `std::unique_ptr` & `std::shared_ptr`**
+    * **File Handles**: A pointer or integer representing an open file
+    * **Network Sockets**: A connection to a server.
+    * **Hardware Interfaces**:
+        * A mapped pointer to memory on the GPU
+        * A buffer handle that points to memory on the GPU
+
+### Deep copy
+* When a class contains a member in which bitwise copy does not copy the object, we must override the copy constructor to handle the deep copy.
+* This will have to be done recursively for all members, otherwise it will still be a shallow copy.
+```cpp
+class Animal
+{
+    Species *species;
+
+    Animal(const Animal &other) {
+        /**
+         * Bitwise copy will copy the pointer, not the associated
+         * memory.
+         * Hence, handled the copy of species
+         */
+        species = new Species(*other.species);
+    }
+
+    Animal& operator=(const Animal &other) {
+        // 1. Self-assignment check
+        if (this == &other)
+            return *this;
+
+        // 2. Free existing resources
+        delete species;
+
+        // 3. Copy data from 'other' (Deep Copy)
+        species = new Species(*other.species);
+
+        return *this;
+    }
+}
+```
+
+### Solution: Rule of 5
+The rule of 5 can be applied here to help reduce such nuances. In the case of shallow & deep copy, we are intrested in the first 3 (**Rule of 3**)
+1. **Destructor**: Frees resources when it goes out of scope.
+2. **Copy Constructor**: Creates a new object by making a **deep copy** of an existing one
+3. **Copy Assignment Operator**: Replaces the contents of an existing object with a copy of another.
+4. **Move Constructor**: Transfers ownership of resources from a temporary (rvalue) object to a new object, avoiding expensive copies.
+5. **Move Assignment Operator**: Transfers ownership of resources from a temporary object to an existing one.
+6. **Rule of 6**: Adds the **default constructor**. Creates an object from scratch.
+7. **Rule of 7**: Adds the **swap function**. An efficient, non-throwing function to exchange the contents of two objects
+
+The modern approach is **Rule of zero**. Use standard containers (like std::vector, std::shared_ptr) to avoid writing any special member functions.
