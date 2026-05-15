@@ -46,7 +46,7 @@ _mm256_or_si256 | Bitwise OR.
 _mm256_xor_si256 | Bitwise XOR.
 
 ### Important things to note
-* **Data Alignment**: AVX registers work most **efficiently when memory addresses are aligned to 32-byte boundaries**. Using `_mm256_load_ps` on unaligned memory will cause a segmentation fault (crash). Use `_mm256_loadu_ps` (the 'u' stands for unaligned) if you aren't sure, though it carries a minor performance penalty.
+* **Data Alignment**: AVX256 registers work most **efficiently when memory addresses are aligned to 32-byte boundaries**. Using `_mm256_load_ps` on unaligned memory will cause a segmentation fault (crash). Use `_mm256_loadu_ps` (the 'u' stands for unaligned) if you aren't sure, though it carries a minor performance penalty.
 * **The "Remainder" Problem**: If your array size isn't a perfect multiple of 8 (for floats) or 4 (for doubles), your SIMD loop will overshoot the end of the array. You must handle the final few elements using a standard scalar loop (called a cleanup loop).
 * **Branching (The Masking Technique)**: You cannot use an if statement inside a SIMD lane. Instead, you perform the operation for all lanes, generate a mask using a comparison intrinsic (like `_mm256_cmpeq_epi32`), and use that mask to "blend" the results together.
 * **AVX-SSE Transition Penalty**: Mixing older 128-bit SSE code with newer 256-bit AVX code can cause a CPU "state change" penalty. If you mix them, use the `_mm256_zeroupper()` intrinsic to clear the upper half of the YMM registers and avoid performance drops.
@@ -58,3 +58,7 @@ Name | Size | Capacity (32-bit float) | Architecture
 XMM | 128 bits | 4 elements | SSE
 YMM | 256 bits | 8 elements | AVX / AVX2
 ZMM | 512 bits | 16 elements | AVX-512
+
+### Summary of Alignment Requirements:
+* **AVX/AVX2 (256-bit)**: 32-byte alignment
+* **AVX-512 (512-bit)**: 64-byte alignment.
