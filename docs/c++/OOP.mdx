@@ -11,28 +11,70 @@ Object oriented programming
 
 ### Abstraction
 * A class should hide implementation while exposing only members that are required
-* To enforce this, we use **access specifiers**, **abstract classes**, **interfaces**.
+* To enforce this, we use **abstract classes**, **interfaces**.
+
+### Encapulation & Abstraction differences
+These two concepts seem a bit too related so here are some differences
+
+Encapulation | Abstraction
+|:---|:---
+Hides data | Hides implementation
+Focuses on security | Focuses on simplicity
+Uses access modifiers | Uses abstract classes/interfaces
 
 ### Inheritance
-* **Common behaviour can be encapulated** into a base class. Derived classes can **inherite properties & behaviour** from it's base class.
+* **Common behaviour** can be **abstracted & encapsulate** into a base class. Other classes can **inherite properties & behaviour** from a base class.
 * Inheritance promotes **code reusability**
 
 ### Polymorphism
 * Polymorphism means **many forms**.
 * There are two types of polymorphism. **Compile time** & **Runtime** polymorphism.
-    * **Compile-time Polymorphism**: Achieved via **Method Overloading** or **Operator Overloading**.
+    * **Compile-time Polymorphism**: Achieved via **Method Overloading**, **Operator Overloading**, **Curiously Recurring Template Pattern (CRTP)**, **Templates**.
     * **Runtime Polymorphism**: Achieved via **Function Overriding** using the **virtual** keyword. This allows a base class pointer to call the specific implementation of a derived class.
-```cpp
-class Animal 
-{
-    virtual ~Animal() {}
 
-    virtual void speak() { std::cout << "..." << std::endl; }
-}
-class Dog: public Animal 
-{
-    void speak() override { std::cout << "Bark" << std::endl; }
-}
+#### Compile-type polymorphism (**CRTP**):
+Curiously Recurring Template Pattern (**CRTP**) is a C++ technique where a class inherits from a template instantiated with itself. The derived class passes itself as the template parameter.
+
+It is often used to emulate **interfaces**/**mixins** without **virtual overhead**.
+
+```cpp
+template<typename Derived>
+class Animal {
+public:
+  void speak() {
+    static_cast<Derived*>(this)->speakImplementation();
+  }
+};
+
+class Dog : public Animal<Dog> {
+public:
+  void speakImplementation() {
+    std::cout << "Bark" << std::endl;
+  }
+};
+```
+*Note: **Important Limitation** CRTP is not substitutable polymorphism. You cannot do:*
+```cpp
+Animal* a = new Dog(); // invalid
+```
+
+#### Runtime polymorphism:
+```cpp
+class Animal {
+public:
+  virtual ~Animal() {}
+
+  virtual void speak() {
+    std::cout << "..." << std::endl;
+  }
+};
+
+class Dog : public Animal {
+public:
+  void speak() override {
+    std::cout << "Bark" << std::endl;
+  }
+};
 
 Animal* animal = &baseAnimal; // speak() should output "..."
 Dog dog;                      // speak() should output "Bark"
@@ -41,13 +83,15 @@ animal = &dog;
 animal->speak(); // "Bark"
 ```
 
-When you call `animal->speak();`, the program looks into the vtable (virtual table) for the `Dog` class and executes `Dog::speak()` Even though the `typeof(animal)` is `Animal`.
+When you call `animal->speak();`, the program looks into the **vtable** (virtual table) for the `Dog` class and executes `Dog::speak()` Even though the `typeof(animal)` is `Animal`. This is runtime polymorphism.
 
-This is runtime polymorphism
+### CRTP vs Virtual Functions
 
-::::tip
-Is **OOP** good or bad?
-
-That's debatable. **OOP** is good at a higher granularity, however, at lower granularity, **Data oriented design (DOD)** is
-better.
-::::
+CRTP                        | Virtual Functions
+:---                        | :---
+Compile-time dispatch       | Runtime dispatch
+No vtable                   | Uses vtable
+No RTTI required            | RTTI often associated
+Can inline easily           | Harder to inline
+Faster                      | More flexible
+Types fixed at compile time | Types chosen at runtime
