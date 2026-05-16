@@ -51,3 +51,14 @@ for(int i = 0; i < n; i++) {}
 ### const_cast()
 * Used to add or **remove the const qualifier** from a variable.
 * Useful when **interfacing with older APIs** that aren't "const-correct."
+
+### Casting performance
+| Cast               | Compile-time                   | Runtime                        |
+| ------------------ | ------------------------------ | ------------------------------ |
+| `static_cast`      | Usually                        | Sometimes, e.g, for `std::string`, it calls the constructor  |
+| `dynamic_cast`     | No                             | Yes                            |
+| `reinterpret_cast` | Compile-time                   | Runtime behavior may be unsafe |
+| `const_cast`       | Compile-time                   | No runtime check               |
+| C-style cast       | Depends on what it resolves to | Depends                        |
+
+`static_cast` may be compile time if the compiler knows exactly how to do the conversion, e.g `int` -> `float`, `Base*` -> `Derived*`

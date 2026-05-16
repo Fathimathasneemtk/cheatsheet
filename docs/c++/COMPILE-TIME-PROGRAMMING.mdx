@@ -1,0 +1,11 @@
+# Compile-time programming
+
+### The Evolutionary Timeline
+Compile-time programming in C++ wasn't designed all at once; it evolved from a happy accident into a first-class language feature.
+
+Era | Key Feature | Description
+|:---|:---|:---
+C++98 | Macros & Template Metaprogramming (TMP) | Macros were crude. TMP was discovered by accident—realizing the template system is a Turing-complete language executed at compile time. It used a horrible |  functional-style syntax.
+C++11/14 | constexpr | The game-changer. Allowed you to write regular-looking C++ functions that could execute at compile time.
+C++17 | if constexpr | Allowed compile-time conditional branching |  drastically cleaning up template code.
+C++20 | consteval & constinit | Introduced **immediate functions** (guaranteed compile-time) and formal **Concepts** to replace messy template constraints.

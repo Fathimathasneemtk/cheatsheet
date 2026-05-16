@@ -1,6 +1,8 @@
 # SIMD
 Single instruction multiple data
 
+*Note: All examples & intrinsics are AVX2, AVX-512 uses the _mm512 variant, you'll have to search that yourself*
+
 ### How does SIMD work?
 SIMD hardware packs multiple data elements into a single, wider processor register (e.g., 128-bit or 256-bit). A single mathematical command operates on the entire batch at once, drastically reducing clock cycles.
 
@@ -11,13 +13,13 @@ You have access to difference instructions based on the programming language and
 | Intrinsic | Data Type | Operation
 |:--|:--|:--|
 | _mm256_add_ps / pd | 8 floats / 4 doubles | Addition (A+B) |
-| _mm256_sub_ps / pd | 8 floats / 4 doubles | Subtraction (A−B) |
-| _mm256_mul_ps / pd | 8 floats / 4 doubles | Multiplication (A×B) |
+| _mm256_sub_ps / pd | 8 floats / 4 doubles | Subtraction (A-B) |
+| _mm256_mul_ps / pd | 8 floats / 4 doubles | Multiplication (AxB) |
 | _mm256_div_ps / pd | 8 floats / 4 doubles | Division (A÷B) | 
-| _mm256_sqrt_ps / pd | 8 floats / 4 doubles | Square Root (A​) |
-| _mm256_fmadd_ps / pd | 8 floats / 4 doubles | Fused Multiply-Add (A×B+C) |
+| _mm256_sqrt_ps / pd | 8 floats / 4 doubles | Square Root (A) |
+| _mm256_fmadd_ps / pd | 8 floats / 4 doubles | Fused Multiply-Add (AxB+C) |
 
-#### Integer Operations (AVX2 specific)
+#### Integer Operations
 AVX2 significantly improved integer support over the original AVX.
 Intrinsic | Operation
 :---|:---
@@ -53,31 +55,143 @@ _mm256_xor_si256 | Bitwise XOR.
 * **Horizontal Operations are Slow**: SIMD is designed for Vertical operations (adding Array A to Array B). Horizontal operations (adding all numbers inside a single register together) are much slower and require special instructions like _mm256_hadd_ps.
 
 ### Comparison of Register
-Name | Size | Capacity (32-bit float) | Architecture
-:---|:---|:---|:---
-XMM | 128 bits | 4 elements | SSE
-YMM | 256 bits | 8 elements | AVX / AVX2
-ZMM | 512 bits | 16 elements | AVX-512
+Name | Size | Capacity (32-bit float) | Architecture | Memory alignment
+:---|:---|:---|:---|:---
+XMM | 128 bits | 4 elements | SSE | 16 byte
+YMM | 256 bits | 8 elements | AVX / AVX2 | 32 byte
+ZMM | 512 bits | 16 elements | AVX-512 | 64 byte
 
 ### Memory alignment
 
 To allocate memory for SIMD operations, the golden rule is that your alignment must match the register width
 
-### The Modern C++ Way
-Starting with C++17, you should use std::aligned_alloc. It is clean, standard, and works perfectly on Linux.
+#### The Modern C++ Way
+Starting with C++17, you should use `std::aligned_alloc` on linux. For `vectors` and other data structures, use a custom memory allocator like
 
-TODO:
-On 64-bit Linux (and Windows), the standard malloc is guaranteed to return memory aligned to 16 bytes.
+```cpp
+#include <cstdlib>
+#include <new>
+#include <vector>
 
-Because 128-bit SIMD (SSE/SSE2) requires 16-byte alignment, standard malloc and std::vector will work perfectly fine with aligned instructions like _mm_load_ps or _mm_load_pd.
+template <typename T, std::size_t Alignment>
+struct aligned_allocator {
+    using value_type = T;
 
-Why the fuss then?
-The problem starts the moment you move from SSE (128-bit) to AVX (256-bit).
+    aligned_allocator() noexcept = default;
+    template <typename U> aligned_allocator(const aligned_allocator<U, Alignment>&) noexcept {}
 
-The AVX Gap: AVX instructions like _mm256_load_ps require 32-byte alignment. Since malloc only guarantees 16, there is a 50% chance your pointer will fall on a 16-byte boundary that is not a 32-byte boundary (e.g., 0x...10 instead of 0x...20).
+    T* allocate(std::size_t n) {
+        if (n == 0) return nullptr;
+        
+        // Size argument inside std::aligned_alloc MUST be a valid multiple of the specified alignment
+        std::size_t size = n * sizeof(T);
+        if (std::size_t remainder = size % Alignment; remainder != 0)
+          size += (Alignment - remainder);
 
-The Segmentation Fault: If you use an aligned AVX load on a 16-byte aligned pointer provided by malloc, your program will crash.
+        void* ptr = std::aligned_alloc(Alignment, size);
+        if (!ptr) throw std::bad_alloc();
+        
+        return static_cast<T*>(ptr);
+    }
 
-### Summary of Alignment Requirements:
+    void deallocate(T* p, std::size_t) noexcept {
+        std::free(p);
+    }
+
+    bool operator==(const aligned_allocator&) const = default;
+};
+```
+
+```cpp
+std::vector<float, aligned_allocator<float, 32>> vec32; // AVX2
+std::vector<float, aligned_allocator<float, 64>> vec64; // AVX-512
+
+// AVX2
+struct alignas(32) Vec32 {
+  float data[8];
+};
+
+// AVX-512
+struct alignas(64) Vec64 {
+  float data[16]; // Be aware that data[8] was changed to data[16] so that all memory is used. Otherwise we would have padding till the 64 byte line.
+};
+```
+
+The standard `malloc` is guaranteed to return **memory aligned to 16 bytes**.
+
+Because **128-bit SIMD** (**SSE/SSE2/SSE4**) requires **16-byte alignment**, standard `malloc` and `std::vector` will work perfectly fine with aligned instructions like `_mm_load_ps` or `_mm_load_pd`.
+
+AVX instructions like `_mm256_load_ps` require **32-byte alignment**. Since `malloc` only guarantees 16 byte alignment, there is a chance your pointer will fall on a **16-byte boundary** that is not a **32-byte boundary**.
+
+If you use an aligned AVX load on a 16-byte aligned pointer provided by `malloc`, you are in **undefined behaviour** territory.
+
+#### Summary of Alignment Requirements:
+* **SSE/SSE2/SSE4 (128-bit)**: 16-byte alignment.
 * **AVX/AVX2 (256-bit)**: 32-byte alignment
 * **AVX-512 (512-bit)**: 64-byte alignment.
+
+
+### Example usage
+
+```cpp
+#include <iostream>
+#include <cstdlib>
+#include <immintrin.h>
+#include <vector>
+
+// High-performance real-time processing loop
+void apply_audio_gain_avx2(float* data, size_t count, float volume_factor) {
+  // 1. Broadcast the single scalar factor into all 8 slots of a 256-bit YMM register
+  __m256 v_factor = _mm256_set1_ps(volume_factor);
+
+  size_t i = 0;
+  // 2. Vectorized Main Loop: Process 8 float elements at a time
+  size_t vectorized_end = count - (count % 8);
+  for (; i < vectorized_end; i += 8) {
+    // Load 8 contiguous elements from memory. Assumes data pointer is aligned to 32 bytes!
+    __m256 v_samples = _mm256_load_ps(&data[i]);
+
+    // Perform parallel element-wise multiplication
+    __m256 v_result = _mm256_mul_ps(v_samples, v_factor);
+
+    // Store back optimized vector block directly into target buffer memory
+    _mm256_store_ps(&data[i], v_result);
+  }
+
+  // 3. Cleanup / Tail Loop: Catch leftover elements sequentially to prevent out-of-bound errors
+  for (; i < count; ++i) {
+    data[i] *= volume_factor;
+  }
+}
+
+int main() {
+  const size_t total_elements = 1003; // Intentional odd number to activate the cleanup tail loop
+  const float volume_multiplier = 1.5f;
+
+  // Allocate 32-byte strictly aligned memory using standard C++17 paradigms
+  size_t alloc_size = total_elements * sizeof(float);
+  // Adjust size to a multiple of 32 bytes to conform to std::aligned_alloc rules
+  if (alloc_size % 32 != 0) {
+    alloc_size += (32 - (alloc_size % 32));
+  }
+
+  float* audio_buffer = static_cast<float*>(std::aligned_alloc(32, alloc_size));
+  
+  if (!audio_buffer) {
+    std::cerr << "Memory alignment allocation failed!" << std::endl;
+    return -1;
+  }
+
+  // Populate buffer dummy audio values
+  for (size_t i = 0; i < total_elements; ++i) {
+    audio_buffer[i] = static_cast<float>(i % 10);
+  }
+
+  // Run vectorized pipeline
+  apply_audio_gain_avx2(audio_buffer, total_elements, volume_multiplier);
+
+  // Cleanup resources
+  std::free(audio_buffer);
+  return 0;
+}
+```
