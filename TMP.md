@@ -3,7 +3,7 @@
 ## 2. Performance & Scalability
 Optimizing for high traffic and low latency.
 
-### Traffic & Infrastructure
+## Traffic & Infrastructure
 * **Load Balancing:**
     * **Hardware:** F5, Citrix (L4 - Transport Layer).
     * **Software:** Nginx, HAProxy (L7 - Application Layer, allows URL-based routing).
@@ -11,7 +11,7 @@ Optimizing for high traffic and low latency.
     * **Shared:** Multiple users/apps on one CPU.
     * **Dedicated:** High-performance tasks; no "noisy neighbor" effect.
 
-### Database Optimization
+## Database Optimization
 * **Query Speed:**
     * **Indexing:** Use B-Trees for equality/ranges; Hash indexes for exact matches.
     * **Clustering:** Physical sorting of data on disk. Essential for range-based queries.
@@ -19,7 +19,7 @@ Optimizing for high traffic and low latency.
 * **Replication:**
     * **Master-Slave:** Master handles Writes; Slaves handle Reads. Improves read throughput and provides redundancy.
 
-### Caching Strategies
+## Caching Strategies
 * **Levels:** SQL Result Cache -> Redis/Memcached (App level) -> Nginx/Varnish (Proxy level) -> CDN (Edge level).
 * **Caching Policy:**
     * **Write-Through:** Write to DB and Cache simultaneously. (Consistency: High, Latency: Higher).
@@ -27,12 +27,12 @@ Optimizing for high traffic and low latency.
     * **Cache Aside:** App checks cache; if miss, loads from DB and updates cache.
 * **Headers:** Use `E-Tag` (hash of content) and `Last-Modified`. If content hasn't changed, server returns `304 Not Modified`.
 
-### Network & Assets
+## Network & Assets
 * **HTTP/2 & HTTP/3:** Multiplexing (many requests over one connection), Header compression (HPACK), and Server Push. HTTP/3 uses QUIC (UDP-based) to solve Head-of-Line blocking.
 * **CDN:** Serve static assets (JS, CSS, Images) from the nearest geographical edge location.
 * **Asset Optimization:** Use WebP for images, Gzip/Brotli for text compression, and "Responsive Images" (srcset) to serve correct sizes for mobile vs. desktop.
 
-### Logging & Monitoring
+## Logging & Monitoring
 * **Optimization:** Avoid logging massive JSON blobs. Log only metadata and error traces.
 * **Batching:** Buffer logs in memory and write to disk/logging service in chunks to reduce I/O overhead.
 * **Offloading:** Use a dedicated Logging Service (ELK Stack - Elasticsearch, Logstash, Kibana) so logging doesn't slow down the main app.
@@ -61,14 +61,14 @@ Frameworks for managing the development lifecycle.
 ## 5. Principles
 Foundation of clean, maintainable code.
 
-### SOLID Principles
+## SOLID Principles
 1.  **S - Single Responsibility:** A class should have one reason to change.
 2.  **O - Open/Closed:** Open for extension, closed for modification.
 3.  **L - Liskov Substitution:** Subtypes must be substitutable for their base types.
 4.  **I - Interface Segregation:** Don't force clients to depend on methods they don't use.
 5.  **D - Dependency Inversion:** Depend on abstractions, not concretions.
 
-### Other Vital Principles:
+## Other Vital Principles:
 * **DRY (Don't Repeat Yourself):** Reduce repetition of patterns.
 * **KISS (Keep It Simple, Stupid):** Avoid over-engineering.
 * **YAGNI (You Ain't Gonna Need It):** Don't implement functionality until necessary.

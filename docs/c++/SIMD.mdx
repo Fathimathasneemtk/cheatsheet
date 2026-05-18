@@ -3,13 +3,13 @@ Single instruction multiple data
 
 *Note: All examples & intrinsics are AVX2, AVX-512 uses the _mm512 variant, you'll have to search that yourself*
 
-### How does SIMD work?
+## How does SIMD work?
 SIMD hardware packs multiple data elements into a single, wider processor register (e.g., 128-bit or 256-bit). A single mathematical command operates on the entire batch at once, drastically reducing clock cycles.
 
-### What builtin functions can I use?
+## What builtin functions can I use?
 You have access to difference instructions based on the programming language and the target CPU architecture
 
-#### Arithmetic (Float & Double)
+### Arithmetic (Float & Double)
 | Intrinsic | Data Type | Operation
 |:--|:--|:--|
 | _mm256_add_ps / pd | 8 floats / 4 doubles | Addition (A+B) |
@@ -19,7 +19,7 @@ You have access to difference instructions based on the programming language and
 | _mm256_sqrt_ps / pd | 8 floats / 4 doubles | Square Root (A) |
 | _mm256_fmadd_ps / pd | 8 floats / 4 doubles | Fused Multiply-Add (AxB+C) |
 
-#### Integer Operations
+### Integer Operations
 AVX2 significantly improved integer support over the original AVX.
 Intrinsic | Operation
 :---|:---
@@ -28,7 +28,7 @@ _mm256_sub_epi64 | Subtracts 4 packed 64-bit integers.
 _mm256_slli_epi32 | Shift left logical for 8 integers (great for bitwise math).
 _mm256_cmpeq_epi32 | Compares 8 integers; returns a mask where bits are all 1 if equal.
 
-#### Memory Management (Loading & Storing)
+### Memory Management (Loading & Storing)
 You can't do math until the data is in a **YMM register** for 256 bit SIMD operations (AVX2).
 
 Intrinsic | Operation
@@ -38,7 +38,7 @@ _mm256_load_ps | Loads 8 floats from a **32-byte aligned address**. This is **fa
 _mm256_storeu_ps | Stores 8 floats back to memory.
 _mm256_set1_ps(float a) | "Broadcasts" a single float to all 8 slots in the register.
 
-#### Logical Operations (Bitwise SIMD)
+### Logical Operations (Bitwise SIMD)
 These perform the bitwise logic
 
 Intrinsic | Operation
@@ -47,25 +47,25 @@ _mm256_and_si256 | Bitwise AND.
 _mm256_or_si256 | Bitwise OR.
 _mm256_xor_si256 | Bitwise XOR.
 
-### Important things to note
+## Important things to note
 * **Data Alignment**: AVX256 registers work most **efficiently when memory addresses are aligned to 32-byte boundaries**. Using `_mm256_load_ps` on unaligned memory will cause a segmentation fault (crash). Use `_mm256_loadu_ps` (the 'u' stands for unaligned) if you aren't sure, though it carries a minor performance penalty.
 * **The "Remainder" Problem**: If your array size isn't a perfect multiple of 8 (for floats) or 4 (for doubles), your SIMD loop will overshoot the end of the array. You must handle the final few elements using a standard scalar loop (called a cleanup loop).
 * **Branching (The Masking Technique)**: You cannot use an if statement inside a SIMD lane. Instead, you perform the operation for all lanes, generate a mask using a comparison intrinsic (like `_mm256_cmpeq_epi32`), and use that mask to "blend" the results together.
 * **AVX-SSE Transition Penalty**: Mixing older 128-bit SSE code with newer 256-bit AVX code can cause a CPU "state change" penalty. If you mix them, use the `_mm256_zeroupper()` intrinsic to clear the upper half of the YMM registers and avoid performance drops.
 * **Horizontal Operations are Slow**: SIMD is designed for Vertical operations (adding Array A to Array B). Horizontal operations (adding all numbers inside a single register together) are much slower and require special instructions like `_mm256_hadd_ps`.
 
-### Comparison of Register
+## Comparison of Register
 Name | Size | Capacity (32-bit float) | Architecture | Memory alignment
 :---|:---|:---|:---|:---
 XMM | 128 bits | 4 elements | SSE | 16 byte
 YMM | 256 bits | 8 elements | AVX / AVX2 | 32 byte
 ZMM | 512 bits | 16 elements | AVX-512 | 64 byte
 
-### Memory alignment
+## Memory alignment
 
 To allocate memory for SIMD operations, the golden rule is that your alignment must match the register width
 
-#### The Modern C++ Way
+### The Modern C++ Way
 Starting with C++17, you should use `std::aligned_alloc` on linux. For `vectors` and other data structures, use a custom memory allocator like
 
 ```cpp
@@ -125,7 +125,7 @@ AVX instructions like `_mm256_load_ps` require **32-byte alignment**. Since `mal
 
 If you use an aligned AVX load on a 16-byte aligned pointer provided by `malloc`, you are in **undefined behaviour** territory.
 
-### Example usage
+## Example usage
 
 ```cpp
 #include <iostream>

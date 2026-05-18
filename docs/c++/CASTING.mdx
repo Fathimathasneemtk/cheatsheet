@@ -1,6 +1,6 @@
 # Casting
 
-### static_cast()
+## static_cast()
 * Static cast is used when you know the type of the object.
 * It has no performance overhead.
 * There are two type of casts: **downcast**, **upcast**
@@ -34,7 +34,7 @@ for(int i = 0; i < n; i++) {}
 
 ```
 
-### dynamic_cast()
+## dynamic_cast()
 * A dynamic cast is used when you're not sure what the type of the object is and you want to try-cast it.
 * Typically used to **downcast** in **polymorphic hierarchies**
 * Returns a nullptr if the cast fails.
@@ -43,16 +43,16 @@ for(int i = 0; i < n; i++) {}
 * Relies on `RTTI`
     * **Run-Time Type Information**: In some high-performance fields, RTTI may be disabled to improve performance.
 
-### reinterpret_cast()
+## reinterpret_cast()
 * **Very dangerous** way to cast.
 * Basically says, **"take these bits and treat them like type x"**.
 * Pure **bit-reinterpretation**
 
-### const_cast()
+## const_cast()
 * Used to add or **remove the const qualifier** from a variable.
 * Useful when **interfacing with older APIs** that aren't "const-correct."
 
-### Casting performance
+## Casting performance
 | Cast               | Compile-time                   | Runtime                        |
 | ------------------ | ------------------------------ | ------------------------------ |
 | `static_cast`      | Usually                        | Sometimes, e.g, for `std::string`, it calls the constructor  |

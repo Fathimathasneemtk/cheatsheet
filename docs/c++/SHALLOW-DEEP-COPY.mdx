@@ -1,5 +1,5 @@
 # Shallow & deep copy
-### Shallow copy
+## Shallow copy
 * When a class contains a member in which **bitwise copy** does not copy the associated memory, a shallow copy occurs.
 * This happens when the class has a member:
     * **Raw pointer**: Points to memory on the heap. **This can be avoided by using `std::unique_ptr` & `std::shared_ptr`**
@@ -9,7 +9,7 @@
         * A mapped pointer to memory on the GPU
         * A buffer handle that points to memory on the GPU
 
-### Deep copy
+## Deep copy
 * When a class contains a member in which **bitwise copy** does not copy the object, we must override the copy constructor to handle the deep copy.
 * This will have to be done recursively for all members, otherwise it will still be a shallow copy.
 ```cpp
@@ -42,7 +42,7 @@ class Animal
 }
 ```
 
-### Solution: Rule of 5
+## Rule of 7
 The rule of 5 can be applied here to help reduce such nuances. In the case of shallow & deep copy, we are intrested in the first 3 (**Rule of 3**)
 1. **Destructor**: Frees resources when it goes out of scope.
 2. **Copy Constructor**: Creates a new object by making a **deep copy** of an existing one

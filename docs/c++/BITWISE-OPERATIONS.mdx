@@ -1,6 +1,6 @@
 # Bitwise operations
 
-### Operators
+## Operators
 |Operator|Name|Logic|Resulting Bit is 1 if|
 |:---|:---|:---|:---|
 |&|AND|a & b|both bits are 1.|
@@ -10,24 +10,34 @@
 |\<\<|Left Shift|a \<\< n|Shifts bits to the left adding 0s to the right.|
 |\>\>|Right Shift|a \>\> n|Shifts bits to the right discarding bits on the right.|
 
-### Powers of two
+## Powers of two
 If you're working in powers of two you can make use of bitwise operations to **avoid expensive modulus and division operations**
 
 This works only if **n** is a **power of two**
 ```cpp
+#include <bit>
+
+// Suppose we want to multiply/divide/modulo by 16
+constexpr uint64_t N = 16;       // The power of two value
+
+static_assert(std::has_single_bit(N), "N must be a power of two");
+
+// divide: a / N
 uint64_t divide(uint64_t a)
 {
-  return a >> n;
+  return a >> std::countr_zero(N);
 }
 
+// multiply: a * N
 uint64_t multiply(uint64_t a)
 {
-  return a << n;
+  return a << std::countr_zero(N);
 }
 
+// modulus: a % N
 uint64_t modulus(uint64_t a)
 {
-  return a & (n - 1);
+  return a & (N - 1);
 }
 ```
 
@@ -37,9 +47,9 @@ uint64_t modulus(uint64_t a)
 |Multiply|a * 2^n|a \<\< n|Shifting left n times adds zeros| effectively multiplying by 2n.
 |Modulus|a % 2^n|a & (2^n - 1)|Masking with 2n−1 keeps only the remainder bits.
 
-### Useful bitwise operations
+## Useful bitwise operations
 
-#### Turn on a bit
+### Turn on a bit
 ```cpp
 void on(uint64_t &mask, uint32_t n)
 {
@@ -47,7 +57,7 @@ void on(uint64_t &mask, uint32_t n)
 }
 ```
 
-#### Turn off a bit
+### Turn off a bit
 ```cpp
 void off(uint64_t &mask, uint32_t n)
 {
@@ -55,7 +65,7 @@ void off(uint64_t &mask, uint32_t n)
 }
 ```
 
-#### Toggle a bit
+### Toggle a bit
 ```cpp
 void toggle(uint64_t &mask, uint32_t n)
 {
@@ -63,7 +73,7 @@ void toggle(uint64_t &mask, uint32_t n)
 }
 ```
 
-#### Check if a bit is on
+### Check if a bit is on
 ```cpp
 bool isOn(uint64_t mask, uint32_t n)
 {
@@ -71,7 +81,7 @@ bool isOn(uint64_t mask, uint32_t n)
 }
 ```
 
-#### Check if an unsigned int is odd
+### Check if an unsigned int is odd
 If the **LSB** is on, the number is odd, otherwise it's even.
 ```cpp
 bool isOdd(uint64_t mask, uint32_t n)
@@ -79,5 +89,15 @@ bool isOdd(uint64_t mask, uint32_t n)
   return (mask & 1ULL) == 1;
 }
 ```
-
 Notice how I used **1ULL**, it's because I use a 64 bit unsigned integer as the mask.
+
+### Check if an unsigned int is a power of two
+```cpp
+#include <bit> // C++20 bitwise operations
+
+bool isPowerOfTwo(uint64_t a)
+{
+  // return a > 0 && (a & (a - 1)) == 0; // Before C++20
+  return std::has_single_bit(a);         // C++20
+}
+```

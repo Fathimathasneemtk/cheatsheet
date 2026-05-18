@@ -1,12 +1,12 @@
 # RAII
 Resource acquisition is initialization
 
-### What is it?
+## What is it?
 * It ties the lifetime of a resource to the lifetime of a stack object.
 * An object should be responsible for any resource it creates.
 * All resources should be aquired in the constructor and released in the destructor
 
-### The Three Pillars of RAII
+## The Three Pillars of RAII
 * **Acquisition**: The resource (memory, file handle, mutex lock) is acquired in the constructor. If acquisition fails, the constructor throws an exception, and the object is never considered "alive."
 * **Ownership**: The object "owns" the resource for its entire lifespan.
 * **Release**: The resource is automatically released in the destructor.

@@ -1,6 +1,6 @@
 # Compile-time programming
 
-### The Evolutionary Timeline
+## The Evolutionary Timeline
 Compile-time programming in C++ wasn't designed all at once; it evolved from a happy accident into a first-class language feature.
 
 Era | Key Feature | Description
@@ -10,16 +10,16 @@ C++11/14 | constexpr | The game-changer. Allowed you to write regular-looking C+
 C++17 | if constexpr | Allowed compile-time conditional branching |  drastically cleaning up template code.
 C++20 | consteval & constinit | Introduced **immediate functions** (guaranteed compile-time) and formal **Concepts** to replace messy template constraints.
 
-### Macros
+## Macros
 
 Marcros are a thing of the past now but it is used in many legacy systems and can still have it uses. Marcros are evaluated at compile time based on compiler flags most of the time.
 
-#### Contants
+### Contants
 ```cpp
 #define MAX_BUFFER_SIZE 1024
 ```
 
-#### Functions
+### Functions
 ```cpp
 int square(int x)
 {
@@ -39,32 +39,32 @@ void log(Args&&... args)
 #define LOG(...) log(__VA_ARGS__)
 ```
 
-#### Conditional Compilation
+### Conditional Compilation
 This is the most common modern use
 
 ```cpp
 #define DEBUG 1
 
 int main() {
-    std::cout << "Application started." << std::endl;
+  std::cout << "Application started." << std::endl;
 
 #if DEBUG
-    std::cout << "[LOG] Debug mode is ON. Internal states verified." << std::endl;
+  std::cout << "[LOG] Debug mode is ON. Internal states verified." << std::endl;
 #else
-    std::cout << "Running in production mode." << std::endl;
+  std::cout << "Running in production mode." << std::endl;
 #endif
 
-    return 0;
+  return 0;
 }
 ```
 
-### Templates
+## Templates
 Templates are very powerfull and one of my most favourite feature.
 They give you the ability to write generic, type-safe code that the compiler customizes for you on the fly.
 
 The compiler uses that blueprint to generate actual functions or classes only when you request them with a specific data type. This process is called **template instantiation**.
 
-#### Function Templates
+### Function Templates
 Function templates are used to define generic arguments or return types of the function. When the compiler sees a template being used with a specific datatype, in this case a `float` or `int`,
 it will generate the actual function and perform it's duty, i.e, validate the datatype and the operations performed on it. 
 
@@ -80,21 +80,21 @@ T add(T a, T b)
 Add n numbers
 ```cpp
 template <typename... T>
-T add(T&&... args)
+auto add(T&&... args)
 {
   return (... + args);
 }
 ```
 
 
-#### Class Templates
+### Class Templates
 Templates aren't just for functions; they allow you to create entire containers or classes that can hold any data type. This is exactly how the C++ Standard Template Library (STL) containers like `std::vector` or `std::list` work.
 ```cpp
 // Added ttl as a uint64_t just as an example and made a static assert.
 template <typename T, uint64_t TTL>
 class ManagedPtr
 {
-static_assert(TTL > 0 && (TTL & (TTL - 1)) == 0, "Value must be a power of two");
+static_assert(TTL > 0 && (TTL & (TTL - 1)) == 0, "TTL must be a power of two");
 
 private:
   T* m_Ptr;
@@ -128,7 +128,7 @@ public:
 }
 ```
 
-#### Template Specialization
+### Template Specialization
 
 Sometimes, a generic blueprint doesn't work for a specific type. For example, comparing two numbers is straightforward, but comparing two char* (C-style strings) compares their memory addresses, not their alphabetical value.
 
@@ -140,20 +140,365 @@ Template specialization allows you to write a custom "override" blueprint for a 
 // Generic template
 template <typename T>
 bool isEqual(T a, T b) {
-    return a == b;
+  return a == b;
 }
 
 // Explicit specialization for const char*
 template <>
 bool isEqual<const char*>(const char* a, const char* b) {
-    return std::strcmp(a, b) == 0; // Correct way to compare C-strings
+  return std::strcmp(a, b) == 0; // Correct way to compare C-strings
 }
 
 int main() {    
-    // Uses the specialized template because the arguments are const char*
-    std::cout << isEqual("apple", "apple") << std::endl; // True
-    return 0;
+  // Uses the specialized template because the arguments are const char*
+  std::cout << isEqual("apple", "apple") << std::endl; // True
+  return 0;
 }
 ```
 
-### Concepts
+### Function Templates with auto (Abbreviated Templates)
+Instead of writing out the template \<typename T\> boilerplate, you can use auto directly in the function signature.
+
+**The C++20 auto equivalent:**
+```cpp
+auto add(auto a, auto b) {
+  return a + b;
+}
+
+auto add(auto&&... args) {
+  return (... + args);
+}
+```
+
+::::info
+**Difference between original example and auto**
+
+There is a subtle difference between the original example and auto.
+In the original example, we use one template parameter `T`.
+This meant that both parameters had to be the same type.
+
+In the example with `auto`, C++20 treats each `auto` as a seperate parameter.
+As if we wrote:
+```cpp
+template<typename T1, typename T2>
+auto add(T1 a, T2 b)
+{
+  return a + b;
+}
+```
+*Note: The return type is auto because `T1` and `T2` could be different types. `int` & `float`, we have to use `auto` as the return type.*
+
+We could force `b` to be the same as `a` by using `decltype(a)`:
+```cpp
+auto add(auto a, decltype(a) b) {
+  return a + b; 
+}
+```
+::::
+
+## Concepts
+**Source**: [Back to Basics: Concepts in C++ - Nicolai Josuttis - CppCon 2024](https://www.youtube.com/watch?v=jzwqTi7n-rg)
+
+* Constraints are compile-time boolean values
+* Constraints can be combined with `&&`
+  * You can also use `||` but note that it may **add** a **significant** amount of **compile-time**
+* Constraints can be used with `if constexpr` because they are **compile-time boolean values**
+
+### Constraints with Concepts
+
+Constraints are a part of the **methods signature**. This is why **two overloads** with the **same arguments** are allowed.
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, Collection::value_type v) {
+  c.push_back(v);
+};
+
+template<typename Collection, typename T>
+requires HasPushBack<Collection>
+void add(Collection& c, const T& v)
+{
+  c.push_back(v);
+}
+
+template<typename Collection, typename T>
+void add(Collection& c, const T& v)
+{
+  c.insert(v);
+}
+
+std::vector<int> a;
+std::set<int> b;
+
+add(a, 9);
+add(b, 9);
+```
+
+::::tip 
+**Compile-type polymorphism**
+
+**Overload resolution** prefers the more **specialized** function if one matches. This is why `add(a, 9)` works because an overload exists that `requires`
+that constraint `HasPushBack<Collection>` is met.
+::::
+
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, Collection::value_type v) {
+  c.push_back(v);
+};
+```
+
+Two constraints are defined here.
+1. `Collection c` has a method `push_back`.
+2. The method `push_back` accepts a `Collection::value_type v` as an argument.
+
+We could have defined another constraint for `insert` but in this example it was not necessary since **overload resolution** prefers the more **specialized** function.
+
+
+*NOTE: Alternative syntax*, you can use a `concept` as a `typename`. This is the same as `requires HasPushBack<Collection>`
+```cpp
+template<HasPushBack Collection, typename T>
+void add(Collection& c, const T& v)
+{
+  c.push_back(v);
+}
+```
+
+### Testing concepts
+How do we write test cases for concepts?
+
+```cpp
+
+template<typename Collection>
+concept HasPushBack = requires (Collection c, Collection::value_type v) {
+  c.push_back(v);
+};
+
+// Asserts true for vectors
+static_assert(HasPushBack<std::vector<int>>);
+
+// Asserts false for sets
+static_assert(HasPushBack<std::set<int>> == false);
+```
+
+
+### Auto: The C++20 way
+
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, Collection::value_type v) {
+  c.push_back(v);
+};
+
+void add(HasPushBack auto& c, const auto& v)
+{
+  c.push_back(v);
+}
+
+void add(auto& c, const auto& v)
+{
+  c.insert(v);
+}
+
+std::vector<int> a;
+std::set<int> b;
+
+add(a, 9);
+add(b, 9);
+```
+
+Using `auto` we can simplify the original templated methods.
+
+Notice the usage of the `concept` here:
+```cpp
+void add(HasPushBack auto& c, const auto& v)
+```
+This is how we constraint `auto`.
+
+Alternatively you could also constraint `auto` like this:
+
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, Collection::value_type v) {
+  c.push_back(v);
+};
+
+// Invalid, can't use decltype(c) here.
+void add(auto& c, const auto& v)
+requires HasPushBack<decltype(c)>
+{
+  c.push_back(v);
+}
+```
+
+The problem here is that `auto& c` is an **L value reference**. In the concept we are using `Collection::value_type`.
+`std::vector<int>&::value_type` is invalid because **references don't have `members`**
+
+**Solution:** Remove the reference
+```cpp
+void add(auto& c, const auto& v)
+requires HasPushBack<std::remove_cvref_t<decltype(c)>>
+{
+  c.push_back(v);
+}
+```
+
+::::note
+**`std::decay_t<T>` vs `std::remove_cvref_t<T>`**
+
+You may think that `std::decay_t<T>` is okay to use instead of `std::remove_cvref_t<T>` but `std::decay_t<T>` removes both `const`, `volatile` & `references`.
+`std::decay_t<T>` also converts `arrays` to `pointers`. This may not be what you want.
+
+`std::remove_cvref_t<T>` removes only the reference.
+::::
+
+Can we make the concept take care of this so we don't have to have `requires HasPushBack<std::remove_cvref_t<decltype(c)>>`?
+
+We can, here is how:
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, std::remove_cvref_t<Collection>::value_type v) {
+  c.push_back(v);
+};
+```
+
+Our code now looks like:
+
+```cpp
+template<typename Collection>
+concept HasPushBack = requires (Collection c, std::remove_cvref_t<Collection>::value_type v) {
+  c.push_back(v);
+};
+
+// Test case:
+static_assert(HasPushBack<std::vector<int>&>); // will assert true
+
+void add(auto& c, const auto& v)
+requires HasPushBack<decltype(c)>
+{
+  c.push_back(v);
+}
+
+void add(auto& c, const auto& v)
+{
+  c.insert(v);
+}
+
+std::vector<int> a;
+std::set<int> b;
+
+add(a, 9);
+add(b, 9);
+```
+
+### Concepts for multiple parameters
+
+A more simple way to do this is to use **multiple** parameters in our `concept`:
+```cpp
+template<typename Collection, typename T>
+concept CanPushBack = requires (Collection c, T v) {
+  c.push_back(v);
+};
+
+void add(auto& c, const auto& v)
+requires CanPushBack<decltype(c), decltype(v)>
+{
+  c.push_back(v);
+}
+
+// OR
+
+template <typename Collection, typename T>
+void add(Collection& c, const T& v)
+requires CanPushBack<Collection, T>
+{
+  c.push_back(v);
+}
+```
+
+### Granularity of concepts
+
+```cpp
+template <typename Collection>
+concept SequenceCont =
+  std::ranges::range<Collection> &&
+  requires (std::remove_cvref_t<Collection> c, std::ranges::range_value_t<Collection> v) {
+    c.push_back(v);         // Can I push back?
+    c.pop_back(v);          // Can I pop back?
+    c.insert(c.begin(), v); // Can I insert by passing an iterator and a value?
+    c.erase(c.begin());     // Can I erase by passing an iterator?
+    c.clear();              // Can I clear?
+    std::remove_cvref_t<Collection>{v,v,v}; // Can I call the constructor this way?
+    c = {v,v,v}                             // Can I have an assignment?
+    {c < c} -> std::convertible_to<bool>;   // Can I compair with less than and does it return a bool?
+  };
+```
+
+`std::convertible_to<>` & `std::ranges::range<>` are concepts in the standard library.
+Here we were able to create a concept that checks if a type satisfies multiple concepts and requirements.
+
+## Requires
+`require` can be used in two different ways, require expression & require clause
+
+### Requires expression
+
+```cpp
+template<typename Collection, typename T>
+concept CanPushBack = requires (Collection c, T v) {
+  c.push_back(v);
+};
+
+```
+
+### Requires clause
+```cpp
+void add(auto& c, const auto& v)
+requires CanPushBack<decltype(c), decltype(v)>
+{
+  c.push_back(v);
+}
+```
+
+### Combining requires expression & clause
+
+This works but it's better not to use it. `requires requires [definition]`
+```cpp
+void add(auto& c, const auto& v)
+requires requires { c.push_back(v); }
+{
+  c.push_back(v);
+}
+```
+
+### Requires & compile-time if
+
+Constraints can be used with `if constexpr` because they are **compile-time boolean values**
+
+```cpp
+void add(auto& c, const auto& v)
+{
+  if constexpr (requires { c.push_back(v); })
+  {
+    c.push_back(v);
+  }
+  else
+  {
+    c.insert(v);
+  }
+}
+```
+
+::::note
+With `if constexpr` and `requires` we can do a lot.
+* We can use complex concepts we define like `SequenceCont`
+* We can chain requires with `&&` since they are **compile time booleans**
+::::
+
+### Concepts vs. if constexpr: When to use which?
+
+Since both approaches solve the exact same problem, here is a quick guide for your notes on when to use Constrained Overloads vs. Inline if constexpr:
+
+Feature | Constrained Overloads (requires clause) | Inline if constexpr + requires
+|:---|:---|:---
+Readability | Better for architectural separation. Keeps functions short and single-purpose. | Better when the logic is simple and localized inside one function.
+Error Messages | Excellent. If a constraint fails, the compiler tells you exactly which function signature failed. | Can sometimes lead to longer error messages inside the function body if a branch fails to compile.
+Extensibility | **Open for extension**. Other programmers can add new overloads for custom types without touching your original code. | **Closed for extension**. If a new type needs a brand new edge case, you must modify the original function to add another else if constexpr.

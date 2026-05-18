@@ -1,7 +1,7 @@
 # The four pillars of OOP
 Object oriented programming
 
-### Encapulation
+## Encapulation
 * A class is built to **encapsulate behaviour & state**
 * It exposes members through a well thought-out design.
 * To enforce encapulation we make use of **access specifiers**
@@ -9,11 +9,11 @@ Object oriented programming
     * **protected**: Only this class and derived classes can access these members.
     * **public**: Members that are public are accessable outside the class.
 
-### Abstraction
+## Abstraction
 * A class should hide implementation while exposing only members that are required
 * To enforce this, we use **abstract classes**, **interfaces**.
 
-### Encapulation & Abstraction differences
+## Encapulation & Abstraction differences
 These two concepts seem a bit too related so here are some differences
 
 Encapulation | Abstraction
@@ -22,17 +22,17 @@ Hides data | Hides implementation
 Focuses on security | Focuses on simplicity
 Uses access modifiers | Uses abstract classes/interfaces
 
-### Inheritance
+## Inheritance
 * **Common behaviour** can be **abstracted & encapsulate** into a base class. Other classes can **inherite properties & behaviour** from a base class.
 * Inheritance promotes **code reusability**
 
-### Polymorphism
+## Polymorphism
 * Polymorphism means **many forms**.
 * There are two types of polymorphism. **Compile time** & **Runtime** polymorphism.
     * **Compile-time Polymorphism**: Achieved via **Method Overloading**, **Operator Overloading**, **Curiously Recurring Template Pattern (CRTP)**, **Templates**.
     * **Runtime Polymorphism**: Achieved via **Function Overriding** using the **virtual** keyword. This allows a base class pointer to call the specific implementation of a derived class.
 
-#### Compile-type polymorphism (**CRTP**):
+### Compile-type polymorphism (**CRTP**)
 Curiously Recurring Template Pattern (**CRTP**) is a C++ technique where a class inherits from a template instantiated with itself. The derived class passes itself as the template parameter.
 
 It is often used to emulate **interfaces**/**mixins** without **virtual overhead**.
@@ -58,7 +58,7 @@ public:
 Animal* a = new Dog(); // invalid
 ```
 
-#### Runtime polymorphism:
+### Runtime polymorphism
 ```cpp
 class Animal {
 public:
@@ -85,7 +85,7 @@ animal->speak(); // "Bark"
 
 When you call `animal->speak();`, the program looks into the **vtable** (virtual table) for the `Dog` class and executes `Dog::speak()` Even though the `typeof(animal)` is `Animal`. This is runtime polymorphism.
 
-### CRTP vs Virtual Functions
+## CRTP vs Virtual Functions
 
 CRTP                        | Virtual Functions
 :---                        | :---
