@@ -1,6 +1,6 @@
 # Shallow & deep copy
 ### Shallow copy
-* When a class contains a member in which bitwise copy does not copy the associated memory, a shallow copy occurs.
+* When a class contains a member in which **bitwise copy** does not copy the associated memory, a shallow copy occurs.
 * This happens when the class has a member:
     * **Raw pointer**: Points to memory on the heap. **This can be avoided by using `std::unique_ptr` & `std::shared_ptr`**
     * **File Handles**: A pointer or integer representing an open file
@@ -10,7 +10,7 @@
         * A buffer handle that points to memory on the GPU
 
 ### Deep copy
-* When a class contains a member in which bitwise copy does not copy the object, we must override the copy constructor to handle the deep copy.
+* When a class contains a member in which **bitwise copy** does not copy the object, we must override the copy constructor to handle the deep copy.
 * This will have to be done recursively for all members, otherwise it will still be a shallow copy.
 ```cpp
 class Animal
