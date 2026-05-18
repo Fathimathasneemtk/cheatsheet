@@ -164,3 +164,19 @@ class IAccountant {
 * High-level modules should not depend on low-level modules. Both should depend on abstractions.
 * `Attendance` class (high-level) shouldn't know about `WiFiPolicy` or `FingerprintPolicy` (low-level details). It only knows about `IPolicy` (the abstraction).
 * This is the ultimate goal of the previous four principles. It allows you to swap out a database, a UI framework, or a business rule without touching the core orchestration logic.
+
+`Attendance` depends on the abstraction `IPolicy`. It does not depend on any **concrete class**
+```cpp
+class IPolicy
+{
+  virtual ~IPolicy() = default;
+  virtual void apply(const User &user) = 0;
+}
+
+class Attandance
+{
+  IPolicy* m_Policy;
+
+  Attendance(IPolicy* policy) : m_Policy(policy) {}
+}
+```
