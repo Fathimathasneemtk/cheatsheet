@@ -81,3 +81,4 @@ Write about ranges
 Write about Design patterns
 Write about Big O, amortized time
 Write about algorithms, techniques, etc 
+DFS - inorder traversal
