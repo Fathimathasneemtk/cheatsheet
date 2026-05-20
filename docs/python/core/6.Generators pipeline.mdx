@@ -164,6 +164,57 @@ Chaining generators (built by passing one generator into another.) , to process 
        * Saves line of code 
        * Perfect for flatteinig the data
          * If you have nested structures (like a list of lists) or chained generators in a pipeline, yield from lets you seamlessly pass data up the chain without nesting multiple for loops
+2. ### ```send()``` Method
+  * Normally generator only give data using ```yield`` .
+  * The ```send()``` method make them 2 way street
+  * It allows to **inject a data value back inside the generator** exactly where it last paused
+  * The value we send actually becomes the result of the yield statement inside the function.
+  
+  ```py
+
+  def dynamic_counter():
+    count = 0
+    while True:
+        # 1. Python pauses right here when it hits 'yield count' and outputs the value.
+        # 2. When you use .send(), the received value drops into the 'received' variable.
+        received= yeild count
+        
+        # If the user sent something, update our count!
+        if received is not None:
+            count = received
+        else:
+            count += 1
+
+   # --- Using the generator ---
+   gen = dynamic_counter()
+
+   # STEP 1: The Prime Rule (You must always start/prime a generator)
+   # You can't send data immediately because the generator hasn't paused at a 'yield' yet.
+   print(next(gen))  # Outputs: 0 (Pauses at the first yield)
+
+   # STEP 2: Let it run normally
+   print(next(gen))  # Outputs: 1 (received is None, so it increments by 1)
+   print(next(gen))  # Outputs: 2
+
+   # STEP 3: Use .send() to inject a value!
+   # This changes 'received' to 100 inside the function
+   print(gen.send(100))  # Outputs: 100 
+
+   # STEP 4: Continue normally from the new starting point
+   print(next(gen))  # Outputs: 101
+
+  ```
+### The rules of ```.send()```
+1. #### **You must "prime"(start) it first**
+  * When we create a generator it is sitting at the top level of the function.It has not hit a ```yield``` statement yet.
+  *  You must call a `next(gen)` or `gen.send(None)` before doing the `.send(value)` .Otherwise if you first call `gen.send(100)` will raise `TypeError`.
+  *  The `yield` statement should come first for catching it ,before we sending. If there is no `yeild` statement then it will crashes with `TypeError`.
+2. #### `next(gen)` is just a short call
+   Calling `next(gen)` is same as calling `gen.send(None)`
+
+  #### Application:
+  In advanced programming, `.send()` is the foundational building block for **coroutines** and light weight cooperative multitasking. It allows different parts of the program to pause, pass data back and forth, coordinate tasks without running multiple heavy threads at the same time.
+  
 
 
 ## 6- Advantages of Generators
