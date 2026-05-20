@@ -1,0 +1,164 @@
+---
+# Display h2 to h5 headings
+toc_min_heading_level: 2
+toc_max_heading_level: 4
+---
+
+# Storage
+
+Secondary storage (or **auxiliary memory**) is **non-volatile**. **Volatile** means likely to change **suddenly**, **unexpectedly**, or **uncontrollably**.
+
+## Memory alignment
+Storage Component | Smallest Read/Write Unit | Smallest Erase Unit
+|:--|:--|:--
+HDD | Sector 4096 bytes | Sector (**Overwrites directly**)
+SSD | Page 4 Kb - 16 Kb | Block (**Multiple pages**)
+RAM | Page 4096 bytes | Byte-addressable
+
+Memory alignment is very important for high throughput.
+
+* **Read & write a byte**: Even if you ask the OS to **write** a **single byte** to a file, the physical hardware must **read and write** in **whole 4KB blocks**
+* **File offset alignment**: The position in the file where you are reading or writing must be a multiple of 4KB.
+* **Memory Buffer Alignment**: The address of the RAM buffer holding your data must be a multiple of 4KB. This can be achieved using `alignas(4096)` or `std::aligned_alloc`
+
+--- 
+
+### What happens if you don't align?
+
+If your memory buffer or file offset is misaligned, the consequences depend on how you opened the file:
+
+#### Standard I/O (Using the OS Page Cache)
+If you use standard system calls or `std::fstream`, the OS masks the alignment issue for you, but you pay a silent performance penalty called a **Read-Modify-Write** (RMW) cycle
+
+If you try to write a 4KB chunk of data that spans across two physical sectors:
+1. The OS must **read** both physical 4KB sectors from the disk into RAM.
+2. It **modifies** the specific bytes in memory with your new data.
+3. It **writes** both 4KB sectors back to the disk.
+
+#### Direct I/O (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+If you **bypass** the OS **look-ahead cache** for maximum performance using Direct I/O, the OS stops holding your hand. **Misalignment will cause the I/O system call to fail completely.**
+
+Using `O_DIRECT` can give you better performance since it will not use the OS level cache but instead use **vendor-specific hardware implementation**. This reduces the number of **cpu cycles** during reads.
+
+* On Linux, `write()` or `pwrite()` will return `-1` and set `errno` to `EINVAL` (Invalid Argument).
+* On Windows, `WriteFile` will fail with `ERROR_INVALID_PARAMETER`.
+
+### How to achieve 4096 byte alignment?
+You can use `std::aligned_alloc`. Note that the allocation size must be a multiple of the alignment.
+```cpp
+#include <string>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdexcept>
+#include <cstring>
+#include <cerrno>
+
+constexpr std::size_t alignment = 4096;
+
+static std::size_t round_up(std::size_t n, std::size_t align) {
+    return ((n + align - 1) / align) * align;
+}
+
+void write_buffer(const std::string& filename, const void* data, std::size_t size) {
+    if (size == 0) return;
+
+    // Standard flags: let the OS manage caching and look-ahead optimization
+    int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0)
+        throw std::runtime_error("Buffered open failed: " + std::string(strerror(errno)));
+
+    // Pre-allocate file space to prevent filesystem fragmentation
+    if (::posix_fallocate(fd, 0, size) != 0)
+        std::cout << "Failed to pre-allocate file space" << endl;
+
+    const char* buffer = static_cast<const char*>(data);
+    std::size_t remaining = size;
+
+    while (remaining > 0) {
+        ssize_t written = ::write(fd, buffer, remaining);
+
+        if (written < 0) {
+            if (errno == EINTR) continue; // Interrupted by system signal, retry safely
+            ::close(fd);
+            throw std::runtime_error("Buffered write failed: " + std::string(strerror(errno)));
+        }
+
+        buffer += written;
+        remaining -= static_cast<std::size_t>(written);
+    }
+
+    ::close(fd);
+}
+```
+
+```cpp
+void write_direct(const std::string& filename, const void* data, std::size_t size) {
+    if (size == 0) return;
+
+    // O_DIRECT: bypass the OS page cache
+    int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT, 0644);
+    if (fd < 0)
+        throw std::runtime_error("Direct open failed: " + std::string(strerror(errno)));
+
+    std::size_t write_size = round_up(size, alignment);
+
+    // CRITICAL: For Direct I/O, the file size *must* be pre-allocated to block boundaries
+    if (::posix_fallocate(fd, 0, write_size) != 0)
+        throw std::runtime_error("Failed to pre-allocate memory");
+
+    void* aligned_buffer = nullptr;
+    const char* buffer = static_cast<const char*>(data);
+
+    bool is_memory_aligned = (reinterpret_cast<std::uintptr_t>(data) % ALIGNMENT == 0);
+    bool is_size_perfect = (size == write_size);
+
+    if (!is_memory_aligned || !is_size_perfect) {
+        aligned_buffer = std::aligned_alloc(ALIGNMENT, write_size);
+        if (!aligned_buffer) {
+            ::close(fd);
+            throw std::bad_alloc();
+        }
+
+        std::memset(aligned_buffer, 0, write_size); // Zero padding trailing bytes
+        std::memcpy(aligned_buffer, data, size);
+        buffer = static_cast<const char*>(aligned_buffer);
+    }
+
+    std::size_t remaining = write_size;
+
+    while (remaining > 0) {
+        ssize_t written = ::write(fd, buffer, remaining);
+
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            if (aligned_buffer) std::free(aligned_buffer);
+            ::close(fd);
+            throw std::runtime_error("Direct write failed: " + std::string(strerror(errno)));
+        }
+
+        buffer += written;
+        remaining -= static_cast<std::size_t>(written);
+    }
+
+    ::close(fd);
+    if (aligned_buffer) std::free(aligned_buffer);
+}
+```
+
+Aligning Data Structures
+```cpp
+struct alignas(4096) DiskBlock {
+    uint64_t foo;
+    uint64_t bar;
+    char data[4080]; // Fills out the rest of the 4096 bytes
+};
+
+static_assert(sizeof(DiskBlock) == 4096, "DiskBlock size mismatch!");
+```
+
+## Look-ahead cache
+* **Look-ahead caching** is an optimization technique where a system **anticipates future data requirements** and **preloads** them into the cache before they are explicitly requested by the user or application.
+* **Sequential Access** is **significantly faster** than random access due to internal controller parallelism and **look-ahead caching**
+
+
+
