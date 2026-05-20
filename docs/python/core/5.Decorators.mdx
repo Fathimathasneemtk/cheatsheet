@@ -121,3 +121,41 @@ print(double(5)) # Output :10 (Equivalent to multiply (2,5))
 |```functools.wraps```|Ensuring the custom decorator won't break the function's metadata|
 |```@functools.lru_cache```| Speeding up heavy algorithms or repetitive API/database calls |
 |```functools.partial```| Reusig the functions with fixed default parametrs in specific context.
+
+## 4. Decorator with Parameters
+* Decorators often needs to work with functions which has parameters.
+* We use *args and **kwargs so our wrapper can accept any number of arguments.
+  
+```py
+
+def decorator_name(func):
+   def wrapper(*args,**kwargs):
+      result=func(*args,**kwargs)
+      return result
+   return wrapper
+
+@decorator_name
+def add(a,b):
+   return a+b
+
+```
+
+ #### Higher-Order Function
+* Higher order functions are functions that either take other functions as input, return a function as output, or both.
+* example 
+  ```py
+  def fun(f,x):
+    return f(x)
+   
+   def square(x):
+      return x*x
+
+   res=fun(square,5)
+   print(res)#25
+
+  ```
+## 5. Types of Decorators
+
+### 1. Function Decorators 
+Used to wrap and enhance functions by adding extra behavior before or after the original function runs.
+  
