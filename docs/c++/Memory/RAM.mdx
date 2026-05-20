@@ -47,7 +47,7 @@ Even though the threads never access the same data, the hardware cache coherency
 ### 2. Virtual Memory & Physical Memory & Translation Lookaside Buffer
 
 When you allocate memory in C++ (like creating a `new` object or a `std::vector`), the operating system doesn't give you direct access to the physical 
-copper lines and pins on your RAM sticks. Instead, it hands your program a **Virtual Address**.
+copper lines and pins on your RAM sticks. Instead, it hands your program a [**Virtual Address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address).
 
 Every single application running on your computer thinks it has its own private, massive sandbox of memory. 
 The hardware component responsible for making this trick work is the **MMU (Memory Management Unit)** inside your CPU.
@@ -57,13 +57,13 @@ the CPU caches recent lookups in the **TLB**. Standard Linux memory pages are **
 fragmented **pointer soup** scattered across gigabytes of memory, it triggers rampant TLB cache evictions (TLB misses), forcing slow kernel page-table walks. This 
 happens for both **ITLB** & **DTLB**
 
-* **The Page Table**: To translate your program's virtual address (e.g., `0x7FFF54B2`) into the actual location on the physical RAM stick (e.g., `0x1A2B3C4D`), 
+* **The Page Table**: To translate your program's [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) (e.g., `0x7FFF54B2`) into the actual location on the physical RAM stick (e.g., `0x1A2B3C4D`), 
 the OS maintains a map in physical RAM called a **Page Table**.
 * **The Scale**: Because mapping individual bytes would make the map larger than the RAM itself, the OS groups physical RAM into discrete **4 KB chunks called Page**s.
-* **Instructions**: Instructions are stored in RAM and have **virtual addresses**
-* **Data**: Data is stored in RAM and has **virtual addresses**.
+* **Instructions**: Instructions are stored in RAM and have [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address)
+* **Data**: Data is stored in RAM and has [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address).
 
-Both **instructions & data** virtual addresses are fetched by the **MMU** into **ITLB** & **DTLB**.
+Both **instructions & data** [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) are fetched by the **MMU** into **ITLB** & **DTLB**.
 
 #### 1. DTLB (Data Translation Lookaside Buffer)
 Caches virtual-to-physical translations for data addresses (your variables, arrays, buffers, and heap allocations).
@@ -77,13 +77,13 @@ the data fetch pipeline to stall completely while the **MMU** resolves where the
 * **The Fix:** Package data structures into contiguous arrays (`std::vector` or custom arena allocators). This ensures hundreds of elements are packed into a single 4 KB page, allowing a single DTLB entry to cover thousands of sequential operations.
 
 #### 2. ITLB (Instruction Translation Lookaside Buffer)
-Caches virtual-to-physical translations for **executable code instructions**. Compiled machine instructions are saved as virtual addresses too, 
+Caches virtual-to-physical translations for **executable code instructions**. Compiled machine instructions are saved as [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) too, 
 living inside the executable `.text` segment.
 
 * **Location**: Found in the L1 cache
 
 * **The Fragmentation Trap:** If your code path frequently jumps across deeply **nested dependencies**, massive **shared libraries**, or highly fragmented 
-instruction paths (like **virtual method tables** or **heavy callback loops**). Instructions are also stored as virtual addresses across different 4 KB 
+instruction paths (like **virtual method tables** or **heavy callback loops**). Instructions are also stored as [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) across different 4 KB 
 pages. Every pointer hop hits a new page, knocking older pages out of the ITLB, the CPU triggers **ITLB Misses**. This forces the instruction fetch pipeline 
 to stall completely while the **MMU** resolves where the machine code resides, forcing slow kernel page-table walks.
 
@@ -298,3 +298,125 @@ int main() {
   return 0;
 }
 ```
+
+## Loading a 32 bit integer into the CPUs
+
+When you read a 32-bit integer, both the 4 KB page (only the [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) mapping) and 64 byte cache line is loaded into memory, 
+but they happen at completely different levels of the hardware hierarchy to solve two entirely different problems.
+
+* You **load** the **64-byte cache line** into the **L1 Data Cache** (**SRAM**).
+* You **load** the **4 KB page** into the **TLB** to map the [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) to physical addresses.
+
+### 1. The Virtual Map
+
+Before the CPU can even think about pulling data out of a cache or physical RAM, 
+it needs to translate the **virtual pointer** of that **32-bit integer** into a **physical location on the RAM** stick.
+
+1. The **MMU** looks up the [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) in the L1 **DTLB**.
+2. If it misses, it checks the **STLB**. If that misses, it performs a [**hardware page walk**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) across the **4 KB page tables stored in DRAM**. 
+3. Once found, the **mapping** for that entire **4 KB page** is **cached in the TLB**. Only the translation map is loaded into the TLB, not the whole 4 KB of data.
+
+*NOTE: This happens for instructions too (**ITLB in L1 Instruction Cache**)*
+
+::::info
+**Page-table walk**
+
+Read from [**Virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) till [**CR3 Register**](/cheatsheet/docs/c++/Memory/RAM#the-cr3-register)
+to understand what **page-table walk** is and how we find the correct page on RAM when it's not in **TLB**
+::::
+
+### 2. The Data Fetch
+
+Now that the **MMU** knows the real physical address of your 32-bit integer, it goes to fetch the actual bytes.
+
+* The CPU never fetches a lonely 4-byte integer by itself. It always pulls data in fixed blocks of **64 bytes** (a **Cache Line**).
+* The CPU checks the **L1 Data Cache** to see if that physical 64-byte block is already sitting on the chip.
+* If it's a cache miss, the CPU pulls that entire **64-byte cache line** from the L2 cache, L3 cache, 
+or directly from the physical RAM stick, and **copies** it directly into the **L1 Data Cache**.
+
+*NOTE: This happens for instructions too (**L1 Instruction Cache**)*
+
+### 3. Execution
+
+The 32-bit integer (4 bytes) is extracted out of that 64-byte cache line sitting in the L1 cache and loaded directly into one of the 
+CPU's general-purpose execution registers (like `rax` or `eax`).
+
+### Reality check
+For just a 32 bit integer (something trivial, short-lived, and not referenced by anyone), what actually happens is the compiler will optimize it and load it directly into a register like `eax`, `ebx`
+
+```cpp
+int main()
+{
+  int total = 0;
+
+  for (int i = 0; i < 1000; ++i)
+    total += i;
+  
+  return total;
+}
+```
+
+A modern optimizing compiler (like GCC or Clang with `-O2` or `-O3`) will look at `total` and `i` and realize: 
+*"These variables are short-lived, used constantly, and nobody is asking for their memory addresses."*
+
+* **The Reality**: The compiler will map `total` directly to a hardware register (like `%ebx`) and `i` to another register (like `%ecx`). In this particular example, it will just return the result `1000`.
+* **The Performance**: The numbers are updated directly inside the CPU silicon. For this entire loop, **RAM, 64-byte cache lines, 4 KB pages, 
+and the TLB do not exist**. The 32-bit integers live purely as electrical states inside the core's register file.
+
+## Virtual address
+
+### 1. The pointer
+A 64-bit virtual address pointer isn't just a random hexadecimal number. The CPU hardware splits the bits of that pointer 
+into distinct structural segments to locate everything it needs.
+
+For a standard 4 KB page setup on an x86-64 processor, only the lower 48 bits of a pointer are actually used. 
+The CPU reads those bits from right to left like a set of GPS coordinates:
+
+```
+64-bit Pointer: [ 16 Bits Unused ]  [       36 Bits: Page Number       ] [ 12 Bits: Offset ]
+                                    |--- Index ---|--- Tag (Unique) ---|
+                                           |
+                                           v
+                               +-----------------------+
+                               |    CPU Core L1 TLB    |
+                               +-----------------------+
+                               | Set 0: [ Tag | Phys ] |
+                               | Set 1: [ Tag | Phys ] |  <-- CPU goes straight here
+                               | Set 2: [ Tag | Phys ] |      using the Index bits!
+```
+
+* **The Offset (Lower 12 bits)**: 2^12 = 4096 bytes (exactly 4 KB). These bits point to the precise byte location inside the page. 
+Because the offset is identical in both virtual and physical memory, the CPU doesn't touch these bits during translation.
+
+* **The Page Number (Upper 36 bits)**: This tells the CPU which 4 KB page this address belongs to. The CPU splits these bits further into an **Index** and a **Tag**.
+
+### 2. Walking Into the TLB Array
+The **TLB** on your CPU chip is organized as a hardware array (typically set-associative, exactly like a CPU data cache).
+
+* **Direct Hardware Mapping**: When your program attempts to read a pointer, the CPU takes the **Index** bits from the pointer 
+and uses them as a direct hardware offset to jump straight to a specific row (or "set") inside the TLB array.
+* **The Tag Check**: Once it lands on that row, it compares the remaining Tag bits of your pointer against the tags stored in that hardware slot.
+* **The Verdict:**
+  * **TLB Hit**: If the tags match, the hardware instantly releases the physical address mapped to that slot.
+  * **TLB Miss**: If the slot is empty or the tags don't match, the CPU triggers a hardware miss and forces the **MMU** to perform a page-table walk.
+
+### The CR3 Register
+If it's a TLB miss, how does the **MMU** know where to look in **RAM** to find the **Master Page Table** maps for your specific program?
+
+Every time the Linux kernel **switches context** to run your program, it configures a special, 
+dedicated hardware control register inside your CPU core called **`CR3`** (**Control Register 3**).
+
+::::info
+**CPU scheduler & context switches:**
+  * **Process Context Switch**: Changes `CR3` -> invalidates/bypasses old TLB entries -> forces heavy MMU page walks to rebuild the cache for the new application.
+  * **Thread Context Switch**: Leaves `CR3` alone -> preserves the TLB cache -> keeps address translation running at maximum clock-cycle efficiency.
+::::
+
+* The `CR3` register holds the **raw physical address** of your application's **Master Page Table** directory in RAM.
+* When a **TLB miss occurs**, the **MMU** bypasses all virtual memory. It reads the physical base address directly out of the `CR3` register, 
+uses the upper bits of your pointer to walk down the multi-level page table tree in DRAM (**page-table walk**), finds the translation, and loads it into the **TLB** slot for next time.
+
+### Master Page Table
+In operating systems, a **Master Page Table** (often referred to as a root page table, page directory, or PGD) is 
+the top-level structure in a multi-level paging system. It maps a process's virtual memory to the lower-level page tables, 
+which ultimately point to physical memory frames.
