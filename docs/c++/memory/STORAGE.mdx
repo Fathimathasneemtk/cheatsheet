@@ -109,11 +109,11 @@ void write_direct(const std::string& filename, const void* data, std::size_t siz
     void* aligned_buffer = nullptr;
     const char* buffer = static_cast<const char*>(data);
 
-    bool is_memory_aligned = (reinterpret_cast<std::uintptr_t>(data) % ALIGNMENT == 0);
+    bool is_memory_aligned = (reinterpret_cast<std::uintptr_t>(data) % alignment == 0);
     bool is_size_perfect = (size == write_size);
 
     if (!is_memory_aligned || !is_size_perfect) {
-        aligned_buffer = std::aligned_alloc(ALIGNMENT, write_size);
+        aligned_buffer = std::aligned_alloc(alignment, write_size);
         if (!aligned_buffer) {
             ::close(fd);
             throw std::bad_alloc();
