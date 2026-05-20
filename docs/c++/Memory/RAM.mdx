@@ -1,0 +1,300 @@
+---
+toc_min_heading_level: 2
+toc_max_heading_level: 4
+---
+
+# RAM
+
+To write maximum-performance systems software, you must treat RAM not as a flat, uniform array of bytes, but as a deeply pipelined, highly volatile hardware topology. Hardware optimizations (like CPU caches, prefetchers, and memory controllers) can accelerate your code by orders of magnitude—or cripple it through cache thrashing, alignment faults, and bus contention.
+
+---
+
+## Hardware Architecture & DRAM Topology
+
+| Layer / Component | Operational Unit | Latency (Approximate) | Characteristics |
+| :--- | :--- | :--- | :--- |
+| **L1 Cache (Data/Inst)** | 32 KB - 48 KB per core | ~1 ns (4-5 clock cycles) | Ultra-fast static RAM (SRAM) tied directly to execution ports. |
+| **L2 Cache** | 512 KB - 1 MB per core | ~3-4 ns (12-14 clock cycles) | Dedicated per-core or tightly shared intermediate SRAM cache. |
+| **L3 Cache (LLC)** | 16 MB - 96 MB+ shared | ~12-20 ns (40-60 clock cycles) | Large, Last-Level Cache shared across all cores on a silicon die. |
+| **Main Memory (DRAM)**| Gigabytes | ~60-100 ns (200+ clock cycles) | Dynamic RAM using capacitors. High capacity but massive latency penalty. |
+
+---
+
+## The Cache Line and Memory Alignment
+
+The CPU never fetches individual bytes from main memory. It moves data in fixed-size blocks called **Cache Lines**, which are almost universally **64 bytes** wide.
+
+### 1. Spatial and Temporal Locality
+* **Spatial Locality**: Storing data structures sequentially in memory ensures that when the first item is loaded, the subsequent elements are fetched into the L1 cache within the same 64-byte line for free.
+* **Temporal Locality**: Accessing the same memory address repeatedly ensures it stays residency locked within the fastest L1/L2 cache tiers before being evicted.
+
+### 2. Struct Padding and Aligned Access
+Modern CPUs are hardwired to execute memory operations on addresses that match the natural boundary of the data type (e.g., a 4-byte `uint32_t` should start at an address divisible by 4). 
+If an object or primitive straddles a 64-byte cache line boundary:
+* The CPU must execute **two separate cache transactions** to assemble a single primitive.
+* In multi-threaded environments, this causes severe atomic bus locking or cache line split penalties.
+
+---
+
+## Performance Bottlenecks & Fixes
+
+### 1. False Sharing (Cache Line Contention)
+False sharing occurs when two independent threads running on different cores modify distinct variables that happen to reside within the *same 64-byte cache line*. 
+Even though the threads never access the same data, the hardware cache coherency protocol (e.g., MESI) is forced to invalidate the entire cache line across both cores every time either thread writes. This bounces the cache line back and forth via the interconnect bus, decimating multi-threaded scaling.
+
+> **The Fix:** Use explicit alignment tags (`alignas(64)`) or standard definitions like `std::hardware_destructive_interference_size` to force independent multi-threaded variables onto isolated cache lines.
+
+### 2. Virtual Memory & Physical Memory & Translation Lookaside Buffer
+
+When you allocate memory in C++ (like creating a `new` object or a `std::vector`), the operating system doesn't give you direct access to the physical 
+copper lines and pins on your RAM sticks. Instead, it hands your program a **Virtual Address**.
+
+Every single application running on your computer thinks it has its own private, massive sandbox of memory. 
+The hardware component responsible for making this trick work is the **MMU (Memory Management Unit)** inside your CPU.
+
+Virtual memory maps application addresses to physical RAM layouts using page tables. To skip slow page-table parsing, 
+the CPU caches recent lookups in the **TLB**. Standard Linux memory pages are **4 KB**. If an application references highly 
+fragmented **pointer soup** scattered across gigabytes of memory, it triggers rampant TLB cache evictions (TLB misses), forcing slow kernel page-table walks. This 
+happens for both **ITLB** & **DTLB**
+
+* **The Page Table**: To translate your program's virtual address (e.g., `0x7FFF54B2`) into the actual location on the physical RAM stick (e.g., `0x1A2B3C4D`), 
+the OS maintains a map in physical RAM called a **Page Table**.
+* **The Scale**: Because mapping individual bytes would make the map larger than the RAM itself, the OS groups physical RAM into discrete **4 KB chunks called Page**s.
+* **Instructions**: Instructions are stored in RAM and have **virtual addresses**
+* **Data**: Data is stored in RAM and has **virtual addresses**.
+
+Both **instructions & data** virtual addresses are fetched by the **MMU** into **ITLB** & **DTLB**.
+
+#### 1. DTLB (Data Translation Lookaside Buffer)
+Caches virtual-to-physical translations for data addresses (your variables, arrays, buffers, and heap allocations).
+
+* **Location**: Found in the L1 cache
+
+* **The Fragmentation Trap:** Iterating over a linked list or an un-optimized pointer-heavy tree (where nodes were allocated via individual `malloc` calls over time) 
+scatters data across different 4 KB pages. Every pointer hop hits a new page, knocking older pages out of the DTLB, the CPU triggers **DTLB Misses**. This forces 
+the data fetch pipeline to stall completely while the **MMU** resolves where the data resides, forcing slow kernel page-table walks.
+
+* **The Fix:** Package data structures into contiguous arrays (`std::vector` or custom arena allocators). This ensures hundreds of elements are packed into a single 4 KB page, allowing a single DTLB entry to cover thousands of sequential operations.
+
+#### 2. ITLB (Instruction Translation Lookaside Buffer)
+Caches virtual-to-physical translations for **executable code instructions**. Compiled machine instructions are saved as virtual addresses too, 
+living inside the executable `.text` segment.
+
+* **Location**: Found in the L1 cache
+
+* **The Fragmentation Trap:** If your code path frequently jumps across deeply **nested dependencies**, massive **shared libraries**, or highly fragmented 
+instruction paths (like **virtual method tables** or **heavy callback loops**). Instructions are also stored as virtual addresses across different 4 KB 
+pages. Every pointer hop hits a new page, knocking older pages out of the ITLB, the CPU triggers **ITLB Misses**. This forces the instruction fetch pipeline 
+to stall completely while the **MMU** resolves where the machine code resides, forcing slow kernel page-table walks.
+
+* **The Fix:** Compile performance-critical systems with Link-Time Optimization (`-flto`) and Profile-Guided Optimization (`-fprofile-generate`/`-fprofile-use`). This forces the compiler to physically reorder hot execution paths right next to each other in memory, maximizing instruction page density.
+
+#### 3. STLB (Shared Translation Lookaside Buffer)
+The final defense line before hitting physical RAM. It is unified—storing both data and instruction address mappings. It is much larger (typically 1024 to 2048+ entries) but operates slightly slower (~4-8 clock cycles).
+
+* **Location**: Found in the L2 cache
+
+* **The Performance Cliff:** If an application suffers from severe DTLB and ITLB fragmentation simultaneously, data and code translations will aggressively compete for slots inside the STLB. They will continuously evict each other, trapping the CPU in a continuous cycle of **Hardware Page Table Walks** (costing 100-200+ cycles per miss).
+
+* **The Fix:** Back your critical allocations with **Huge Pages** (2 MB or 1 GB pages). Moving from 4 KB pages to 2 MB Huge Pages multiplies the coverage area of a single TLB slot by **512x**, completely eliminating STLB exhaustion.
+
+---
+
+## Complete, High-Performance C++ Code Examples
+
+### 1. Exploiting Spatial Cache Locality (Row vs. Column Major)
+This complete program demonstrates the massive performance difference between cache-friendly sequential access (Row-Major) and cache-shredding strided access (Column-Major) across a large 2D matrix.
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <numeric>
+
+constexpr size_t MATRIX_SIZE = 8192;
+
+void run_row_major(const std::vector<uint32_t>& matrix, size_t size) {
+  uint64_t sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // Cache-Friendly: Accessing elements sequentially along the cache line
+  for (size_t r = 0; r < size; ++r) {
+    for (size_t c = 0; c < size; ++c) {
+      sum += matrix[r * size + c];
+    }
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+  std::cout << "Row-Major (Sequential) Time: " << duration.count() << " ms | Sum: " << sum << "\n";
+}
+
+void run_column_major(const std::vector<uint32_t>& matrix, size_t size) {
+  uint64_t sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // Cache-Hostile: Accessing elements via massive strides (skipping full rows)
+  for (size_t c = 0; c < size; ++c) {
+    for (size_t r = 0; r < size; ++r) {
+      sum += matrix[r * size + c];
+    }
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+  std::cout << "Column-Major (Strided) Time: " << duration.count() << " ms | Sum: " << sum << "\n";
+}
+
+int main() {
+  std::cout << "Allocating and initializing a " << MATRIX_SIZE << "x" << MATRIX_SIZE << " matrix...\n";
+  std::vector<uint32_t> matrix(MATRIX_SIZE * MATRIX_SIZE);
+  std::iota(matrix.begin(), matrix.end(), 1);
+
+  // Warm up cache
+  volatile uint64_t warm = std::accumulate(matrix.begin(), matrix.begin() + 1000, 0ULL);
+  (void)warm;
+
+  run_row_major(matrix, MATRIX_SIZE);
+  run_column_major(matrix, MATRIX_SIZE);
+
+  return 0;
+}
+```
+
+### 2. Eliminating False Sharing in Multi-Threaded Code
+This program allocates adjacent atomic counters shared across multiple workers. It demonstrates how unaligned data stalls threads due to cache line bouncing, and how explicit alignment mitigates it entirely.
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <chrono>
+
+constexpr uint64_t ITERATIONS = 50'000'000;
+
+// Hostile Layout: Multiple threads hammer variables grouped inside the exact same cache line.
+struct FalseSharingCacheLine {
+  std::atomic<uint64_t> value{0};
+};
+
+// Optimal Layout: Explicitly isolates each thread's variable onto its own cache line boundary.
+struct alignas(64) CleanCacheLine {
+  std::atomic<uint64_t> value{0};
+};
+
+template <typename T>
+void worker(T& counter) {
+  for (uint64_t i = 0; i < ITERATIONS; ++i) {
+    counter.value.fetch_add(1, std::memory_order_relaxed);
+  }
+}
+
+int main() {
+  unsigned int hardware_threads = std::thread::hardware_concurrency();
+  if (hardware_threads < 2) {
+    std::cout << "Benchmark requires at least 2 hardware threads to show contention.\n";
+    return 0;
+  }
+  
+  size_t active_workers = 2; // Test with two active threads fighting for lines
+  std::cout << "Running cache line contention benchmark with " << active_workers << " threads...\n";
+
+  {
+    std::vector<FalseSharingCacheLine> bad_counters(active_workers);
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < active_workers; ++i) {
+      threads.emplace_back(worker<FalseSharingCacheLine>, std::ref(bad_counters[i]));
+    }
+    for (auto& t : threads) t.join();
+    auto end = std::chrono::high_resolution_clock::now();
+    
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "False Sharing (Unaligned) Layout Duration: " << duration.count() << " ms\n";
+  }
+
+  {
+    std::vector<CleanCacheLine> good_counters(active_workers);
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < active_workers; ++i) {
+      threads.emplace_back(worker<CleanCacheLine>, std::ref(good_counters[i]));
+    }
+    for (auto& t : threads) t.join();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "Clean Cache Isolation (Aligned) Layout Duration: " << duration.count() << " ms\n";
+  }
+
+  return 0;
+}
+```
+
+### 3. Manual Alignment and Explicit Software Prefetching
+For critical hot loops dealing with large non-linear data traversal (e.g., walking trees or jumping nodes), the hardware prefetcher can fail. This complete program shows how to safely allocate memory aligned to 64-byte boundaries and issue explicit instruction prefetch hints via intrinsic compilers.
+
+```cpp
+#include <iostream>
+#include <cstdlib>
+#include <new>
+#include <chrono>
+#include <vector>
+
+constexpr size_t ALIGNMENT = 64; // Cache Line Alignment
+constexpr size_t ELEMENT_COUNT = 16'777'216; // 16M elements
+
+struct alignas(64) Node {
+    uint64_t data;
+    uint64_t padding[7]; // Fill up exactly one 64-byte cache line
+};
+
+int main() {
+  // Correctly allocate an array of aligned elements safely via modern C++
+  // This guarantees the base address starts perfectly on a cache-line boundary
+  Node* array = static_cast<Node*>(std::aligned_alloc(ALIGNMENT, ELEMENT_COUNT * sizeof(Node)));
+  if (!array) {
+    std::cerr << "Aligned allocation failed\n";
+    return 1;
+  }
+
+  // Initialize data
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    array[i].data = i;
+  }
+
+  // Allocate a random look-ahead stride index map to bypass standard sequential hardware tracking
+  std::vector<size_t> indices(ELEMENT_COUNT);
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    // Pseudo-random stride step to defeat standard look-ahead prefetchers
+    indices[i] = (i * 101) % ELEMENT_COUNT;
+  }
+
+  uint64_t total_sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    // Look-ahead explicit prefetch instruction hint (e.g., 16 iterations in advance)
+    if (i + 16 < ELEMENT_COUNT) {
+      #if defined(__GNUC__) || defined(__clang__)
+      // __builtin_prefetch(address, rw_flag, locality_importance)
+      // rw_flag = 0 (Read), locality = 3 (Keep in L1 cache high priority)
+      __builtin_prefetch(&array[indices[i + 16]], 0, 3);
+      #endif
+    }
+    total_sum += array[indices[i]].data;
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+
+  std::cout << "Custom Index Jump Sum: " << total_sum << "\n";
+  std::cout << "Execution time with software prefetching: " << duration.count() << " ms\n";
+
+  std::free(array);
+  return 0;
+}
+```

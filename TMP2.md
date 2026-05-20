@@ -72,13 +72,23 @@ Sampling Profilers: Experience with tools like perf, Intel VTune, or Tracy Profi
 
 
 Extras:
+
 write about explicit constructors and implicit down casting
+
 Write about conversion operators & explicit conversion operators
+
 Write about templates, concepts & crtp
+
 write about friend methods and classes
+
 Write DOD, SOA
+
 Write about ranges
+
 Write about Design patterns
+
 Write about Big O, amortized time
+
 Write about algorithms, techniques, etc 
+
 DFS - inorder traversal

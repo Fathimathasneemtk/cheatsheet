@@ -1,5 +1,4 @@
 ---
-# Display h2 to h5 headings
 toc_min_heading_level: 2
 toc_max_heading_level: 4
 ---
@@ -8,157 +7,431 @@ toc_max_heading_level: 4
 
 Secondary storage (or **auxiliary memory**) is **non-volatile**. **Volatile** means likely to change **suddenly**, **unexpectedly**, or **uncontrollably**.
 
-## Memory alignment
-Storage Component | Smallest Read/Write Unit | Smallest Erase Unit
-|:--|:--|:--
-HDD | Sector 4096 bytes | Sector (**Overwrites directly**)
-SSD | Page 4 Kb - 16 Kb | Block (**Multiple pages**)
-RAM | Page 4096 bytes | Byte-addressable
+To maximize storage I/O throughput, software must align with the physical realities of modern hardware (NVMe SSDs) and the operating system kernel. Merely calling `write()` or using standard library streams introduces silent bottlenecks, redundant memory copies, and queue starvation.
 
-Memory alignment is very important for high throughput.
+## Hardware & Operating System Layers
 
-* **Read & write a byte**: Even if you ask the OS to **write** a **single byte** to a file, the physical hardware must **read and write** in **whole 4KB blocks**
-* **File offset alignment**: The position in the file where you are reading or writing must be a multiple of 4KB.
-* **Memory Buffer Alignment**: The address of the RAM buffer holding your data must be a multiple of 4KB. This can be achieved using `alignas(4096)` or `std::aligned_alloc`
+| Layer / Component | Smallest Read/Write Unit | Smallest Erase Unit | Characteristics |
+| :--- | :--- | :--- | :--- |
+| **HDD (Mechanical)** | Sector (Typically 4096 bytes) | N/A (Overwrites directly) | High random-access penalty due to physical disk head movement. |
+| **SSD (Solid State)** | Page (4 KB - 16 KB) | Block (2 MB - 8 MB) | Cannot overwrite in place. Requires garbage collection; prone to Write Amplification. |
+| **OS Page Cache** | Page (4096 bytes) | N/A | Volatile kernel buffer tracking dirty pages for delayed asynchronous writes. |
 
 --- 
 
-### What happens if you don't align?
+## Memory and File Alignment
 
-If your memory buffer or file offset is misaligned, the consequences depend on how you opened the file:
+Hardware controllers and the Linux kernel manage data transfer in discrete blocks (typically 4096 bytes). Operating outside of these boundaries degrades performance or causes hard I/O errors.
 
-#### Standard I/O
-If you use standard system calls or `std::fstream`, the OS masks the alignment issue for you, but you pay a silent performance penalty called a **Read-Modify-Write** (RMW) cycle
+### 1. Read-Modify-Write (RMW) Cycles
+If you request a standard buffered write of a single byte, or write a 4 KB chunk that spans across two physical sectors, the kernel cannot commit this data directly. It must perform a **Read-Modify-Write** cycle:
+1. **Read**: The OS reads the enclosing physical 4 KB block(s) from disk into the page cache.
+2. **Modify**: The target bytes are updated in memory.
+3. **Write**: The entire 4 KB block is marked dirty and eventually written back to the physical device.
 
-If you try to write a 4KB chunk of data that spans across two physical sectors:
-1. The OS must **read** both physical 4KB sectors from the disk into RAM.
-2. It **modifies** the specific bytes in memory with your new data.
-3. It **writes** both 4KB sectors back to the disk.
+This turns a simple write operation into an expensive, latent round-trip to storage.
 
-#### Direct I/O
-If you **bypass** the OS **look-ahead cache** for maximum performance using Direct I/O, the OS stops holding your hand. **Misalignment will cause the I/O system call to fail completely.**
+### 2. File Offset and Buffer Alignment
+To bypass the overhead of the OS page cache entirely, three vectors must be aligned to the storage block size (4096 bytes):
+* **File Offset Alignment**: The file pointer position where reading or writing begins.
+* **Size Alignment**: The total number of bytes transferred per system call.
+* **Memory Buffer Alignment**: The address of the user-space RAM buffer holding the data.
 
-Using `O_DIRECT` can give you better performance since it will not use the OS level cache but instead use **vendor-specific hardware implementation**. This reduces the number of **cpu cycles** during reads.
+--- 
 
-* On Linux, `write()` or `pwrite()` will return `-1` and set `errno` to `EINVAL` (Invalid Argument).
-* On Windows, `WriteFile` will fail with `ERROR_INVALID_PARAMETER`.
+## Buffered I/O vs. Direct I/O (`O_DIRECT`)
 
-### How to achieve 4096 byte alignment?
-You can use `std::aligned_alloc`. Note that the allocation size must be a multiple of the alignment.
+### Standard Buffered I/O
+By default, files opened without specific flags utilize the OS Page Cache. The OS masks misalignment penalties via internal caching and look-ahead background operations. However, this introduces CPU overhead from `memcpy` operations shifting data between user-space and kernel-space memory buffers.
+
+### Direct I/O (`O_DIRECT`)
+Direct I/O bypasses the operating system's look-ahead cache and write-back buffering. Data transfers occur directly between your user-space buffer and the storage controller via DMA (Direct Memory Access). 
+
+> **Critical Constraint:** When using `O_DIRECT`, the operating system stops managing misalignment. If your memory buffer, file offset, or transfer size is not a strict multiple of the underlying hardware block size (4096 bytes), the `write()` or `pwrite()` system calls will fail completely, returning `-1` and setting `errno` to `EINVAL` (or `ERROR_INVALID_PARAMETER` on Windows).
+
+## Direct and Buffered I/O Implementation
+
+It addresses critical real-world edge cases:
+* **The Partial Write Trap**: If a direct write is interrupted or returns a partial size, the remaining data size and memory offsets are validated to ensure alignment integrity before repeating.
+* **Metadata Truncation**: Resolves the padding problem where rounding up sizes to satisfy `O_DIRECT` layout requirements leaves zero-padded garbage at the end of physical files.
+
+*NOTE: You can use `std::aligned_alloc` to allocate aligned memory. The allocation size must be a multiple of 4096 bytes.*
+
 ```cpp
 #include <string>
+#include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdexcept>
 #include <cstring>
 #include <cerrno>
+#include <cstdint>
+#include <cstdlib>
 
-constexpr std::size_t alignment = 4096;
+constexpr std::size_t ALIGNMENT = 4096;
 
-static std::size_t round_up(std::size_t n, std::size_t align) {
-    return ((n + align - 1) / align) * align;
-}
-
-void write_buffer(const std::string& filename, const void* data, std::size_t size) {
-    if (size == 0) return;
-
-    // Standard flags: let the OS manage caching and look-ahead optimization
-    int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0)
-        throw std::runtime_error("Buffered open failed: " + std::string(strerror(errno)));
-
-    // Pre-allocate file space to prevent filesystem fragmentation
-    if (::posix_fallocate(fd, 0, size) != 0)
-        std::cout << "Failed to pre-allocate file space" << endl;
-
-    const char* buffer = static_cast<const char*>(data);
-    std::size_t remaining = size;
-
-    while (remaining > 0) {
-        ssize_t written = ::write(fd, buffer, remaining);
-
-        if (written < 0) {
-            if (errno == EINTR) continue; // Interrupted by system signal, retry safely
-            ::close(fd);
-            throw std::runtime_error("Buffered write failed: " + std::string(strerror(errno)));
-        }
-
-        buffer += written;
-        remaining -= static_cast<std::size_t>(written);
-    }
-
-    ::close(fd);
+static inline std::size_t round_up(std::size_t n, std::size_t align) {
+  return ((n + align - 1) / align) * align;
 }
 ```
 
+Standard I/O:
+```cpp
+void write_buffered(const std::string& filename, const void* data, std::size_t size) {
+  if (size == 0) return;
+
+  int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd < 0)
+    throw std::runtime_error("Buffered open failed: " + std::string(std::strerror(errno)));
+
+  if (::posix_fallocate(fd, 0, static_cast<off_t>(size)) != 0)
+    std::cerr << "Warning: Failed to pre-allocate file space\n";
+
+  const char* buffer = static_cast<const char*>(data);
+  std::size_t remaining = size;
+
+  while (remaining > 0) {
+    ssize_t written = ::write(fd, buffer, remaining);
+
+    if (written < 0) {
+      if (errno == EINTR) continue;
+      ::close(fd);
+      throw std::runtime_error("Buffered write failed: " + std::string(std::strerror(errno)));
+    }
+
+    buffer += written;
+    remaining -= static_cast<std::size_t>(written);
+  }
+
+  ::close(fd);
+}
+```
+
+Direct I/O:
 ```cpp
 void write_direct(const std::string& filename, const void* data, std::size_t size) {
-    if (size == 0) return;
+  if (size == 0) return;
 
-    // O_DIRECT: bypass the OS page cache
-    int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT, 0644);
-    if (fd < 0)
-        throw std::runtime_error("Direct open failed: " + std::string(strerror(errno)));
-
-    std::size_t write_size = round_up(size, alignment);
-
-    // CRITICAL: For Direct I/O, the file size *must* be pre-allocated to block boundaries
-    if (::posix_fallocate(fd, 0, write_size) != 0)
-        throw std::runtime_error("Failed to pre-allocate memory");
-
-    void* aligned_buffer = nullptr;
-    const char* buffer = static_cast<const char*>(data);
-
-    bool is_memory_aligned = (reinterpret_cast<std::uintptr_t>(data) % alignment == 0);
-    bool is_size_perfect = (size == write_size);
-
-    if (!is_memory_aligned || !is_size_perfect) {
-        aligned_buffer = std::aligned_alloc(alignment, write_size);
-        if (!aligned_buffer) {
-            ::close(fd);
-            throw std::bad_alloc();
-        }
-
-        std::memset(aligned_buffer, 0, write_size); // Zero padding trailing bytes
-        std::memcpy(aligned_buffer, data, size);
-        buffer = static_cast<const char*>(aligned_buffer);
-    }
-
-    std::size_t remaining = write_size;
-
-    while (remaining > 0) {
-        ssize_t written = ::write(fd, buffer, remaining);
-
-        if (written < 0) {
-            if (errno == EINTR) continue;
-            if (aligned_buffer) std::free(aligned_buffer);
-            ::close(fd);
-            throw std::runtime_error("Direct write failed: " + std::string(strerror(errno)));
-        }
-
-        buffer += written;
-        remaining -= static_cast<std::size_t>(written);
-    }
-
+  int fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd < 0)
+    throw std::runtime_error("Direct open failed: " + std::string(std::strerror(errno)));
+  
+  if (::fcntl(fd, F_SETFL, O_DIRECT) < 0) {
     ::close(fd);
-    if (aligned_buffer) std::free(aligned_buffer);
+    throw std::runtime_error("Failed to set O_DIRECT flag: " + std::string(std::strerror(errno)));
+  }
+
+  std::size_t write_size = round_up(size, ALIGNMENT);
+
+  if (::posix_fallocate(fd, 0, static_cast<off_t>(write_size)) != 0) {
+    ::close(fd);
+    throw std::runtime_error("Failed to pre-allocate physical block space");
+  }
+
+  void* aligned_buffer = nullptr;
+  const char* buffer = static_cast<const char*>(data);
+
+  bool is_memory_aligned = (reinterpret_cast<std::uintptr_t>(data) % ALIGNMENT == 0);
+  bool is_size_perfect = (size == write_size);
+
+  if (!is_memory_aligned || !is_size_perfect) {
+    aligned_buffer = std::aligned_alloc(ALIGNMENT, write_size);
+    if (!aligned_buffer) {
+      ::close(fd);
+      throw std::bad_alloc();
+    }
+
+    std::memset(aligned_buffer, 0, write_size);
+    std::memcpy(aligned_buffer, data, size);
+    buffer = static_cast<const char*>(aligned_buffer);
+  }
+
+  std::size_t remaining = write_size;
+
+  while (remaining > 0) {
+    ssize_t written = ::write(fd, buffer, remaining);
+
+    if (written < 0) {
+      if (errno == EINTR) continue;
+      if (aligned_buffer) std::free(aligned_buffer);
+      ::close(fd);
+      throw std::runtime_error("Direct write failed: " + std::string(std::strerror(errno)));
+    }
+
+    if (static_cast<std::size_t>(written) % ALIGNMENT != 0 && static_cast<std::size_t>(written) < remaining) {
+      if (aligned_buffer) std::free(aligned_buffer);
+      ::close(fd);
+      throw std::runtime_error("Fatal: Kernel performed unaligned partial direct write.");
+    }
+
+    buffer += written;
+    remaining -= static_cast<std::size_t>(written);
+  }
+
+  if (::ftruncate(fd, static_cast<off_t>(size)) < 0)
+    std::cerr << "Warning: Failed to truncate file metadata to exact logical size\n";
+
+  ::close(fd);
+
+  if (aligned_buffer) std::free(aligned_buffer);
 }
 ```
 
 Aligning Data Structures
 ```cpp
 struct alignas(4096) DiskBlock {
-    uint64_t foo;
-    uint64_t bar;
-    char data[4080]; // Fills out the rest of the 4096 bytes
+  uint64_t foo;
+  uint64_t bar;
+  char data[4080]; // Fills out the rest of the 4096 bytes
 };
 
-static_assert(sizeof(DiskBlock) == 4096, "DiskBlock size mismatch!");
+static_assert(sizeof(DiskBlock) == 4096, "DiskBlock size must equal physical sector sizing");
 ```
 
-## Look-ahead cache
-* **Look-ahead caching** is an optimization technique where a system **anticipates future data requirements** and **preloads** them into the cache before they are explicitly requested by the user or application.
-* **Sequential Access** is **significantly faster** than random access due to internal controller parallelism and **look-ahead caching**
+---
 
+## Architectural Scaling Bottlenecks
 
+### 1. Hardware Parallelism and Queue Depth (The QD=1 Problem)
+Modern NVMe SSDs achieve maximum throughput via concurrent flash channels. An NVMe controller can process up to 64,000 submission/completion queues, each running up to 64,000 commands concurrently. Synchronous I/O routines using standard `write()` force the calling thread to stall until the drive's internal transistor logic registers the command, enforcing an effective Queue Depth (QD) of 1. To utilize hardware fully, application engines must switch to asynchronous systems (e.g., `io_uring` on modern Linux) to batch and push deep workloads concurrently down the PCIe bus.
 
+```cpp
+#include <liburing.h>
+
+struct AsyncIORequest {
+  int fd;
+  struct iovec iov;
+  off_t offset;
+};
+
+void submit_batch_io_uring(struct io_uring* ring, AsyncIORequest* requests, size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    struct io_uring_sqe* sqe = io_uring_get_sqe(ring);
+    if (!sqe) break;
+
+    io_uring_prep_writev(sqe, requests[i].fd, &requests[i].iov, 1, requests[i].offset);
+    io_uring_sqe_set_data(sqe, &requests[i]);
+  }
+  io_uring_submit(ring);
+}
+```
+
+### 2. The SSD Flash Translation Layer (FTL) & Write Amplification
+An SSD cannot overwrite an existing page of data. It can only write pages into an already erased block. While reads and writes occur at the Page level (4 KB–16 KB), erasures can only occur at the much larger Block level (2 MB–8 MB). When random or unaligned updates modify arbitrary blocks, the device's embedded controller executes a Flash Translation Layer (FTL) tracking algorithm to copy valid pages, erase the block, and write back modifications, provoking Write Amplification Factor (WAF). Build architectures using Sequential Append-Only logs to keep WAF near 1.0.
+
+### 3. The User-Space Cache Burden
+When you flag execution for `O_DIRECT`, you assume full responsibility for all data lifecycle caching. Unless you write a highly specialized, thread-safe user-space cache framework tracking memory hits (e.g., an **LRU** or CLOCK page pool strategy), `O_DIRECT` will perform significantly worse than basic buffered OS routines for mixed random access profiles.
+
+LRU Implementation:
+```cpp
+#include <unordered_map>
+#include <list>
+
+class LRUCache {
+  int capacity;
+  //                 {key, value}
+  std::list<std::pair<int, int>> cache_list;
+  //                 key -> iterator
+  std::unordered_map<int, std::list<std::pair<int, int>>::iterator> cache_map;
+
+public:
+  LRUCache(int cap) : capacity(cap) {}
+
+  int get(int key) {
+    if (cache_map.find(key) == cache_map.end()) return -1;
+    
+    // splice() is O(1) - move key to front
+    cache_list.splice(cache_list.begin(), cache_list, cache_map[key]);
+    return cache_map[key]->second;
+  }
+
+  void put(int key, int value) {
+    if (cache_map.find(key) != cache_map.end()) {
+      // Key exists: update value and move to front
+      cache_list.splice(cache_list.begin(), cache_list, cache_map[key]);
+      cache_map[key]->second = value;
+      return;
+    }
+
+    if (cache_list.size() == capacity) {
+      // Cache full: remove the last item (LRU)
+      int last_key = cache_list.back().first;
+      cache_map.erase(last_key);
+      cache_list.pop_back();
+    }
+
+    // Add new item to the front
+    cache_list.push_front({key, value});
+    cache_map[key] = cache_list.begin();
+  }
+};
+```
+
+### 4. Memory-Mapped Files (`mmap`)
+
+```cpp
+#include <sys/mman.h>
+#include <sys/stat.h>
+
+void write_via_mmap(const std::string& filename, const void* data, std::size_t size) {
+  if (size == 0) return;
+
+  int fd = ::open(filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
+
+  if (fd < 0)
+    throw std::runtime_error("Mmap file instantiation failed");
+
+  if (::ftruncate(fd, static_cast<off_t>(size)) < 0) {
+    ::close(fd);
+    throw std::runtime_error("Mmap ftruncate operation aborted");
+  }
+
+  void* map_ptr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (map_ptr == MAP_FAILED) {
+    ::close(fd);
+    throw std::runtime_error("Memory mapping address translation failed");
+  }
+
+  std::memcpy(map_ptr, data, size);
+
+  if (::msync(map_ptr, size, MS_ASYNC) < 0)
+    std::cerr << "Warning: Async memory flush tracking dropped\n";
+
+  ::munmap(map_ptr, size);
+  ::close(fd);
+}
+```
+
+---
+
+## Comparison
+
+Feature | Standard (Buffered) I/O | Direct I/O (O_DIRECT) | io_uring
+|:---|:---|:---|:---
+Kernel Page Cache | Used. The kernel catches writes in RAM and flushes them later. | Bypassed. Transfers pass straight to storage via DMA. | Configurable. Can use page cache or run in direct mode.
+Execution Model | Synchronous. The calling thread blocks during the system call. | Synchronous. Blocks until the drive controller acknowledges the data. | Asynchronous. Submits I/O to a ring buffer and polls/waits for completion later.
+Alignment Rules | None. Kernel handles misaligned offsets and sizes seamlessly. | Strict. Buffers, file offsets, and sizes must align to block boundaries (typically 4096 bytes). | Dependent. Follows underlying file descriptor rules (strict if paired with O_DIRECT).
+Memory Copies | High. Requires memcpy between user space and kernel space buffers. | Zero. Eliminates kernel-space data copying entirely. | Minimal to Zero. Shared rings eliminate system call overhead; can use registered buffers.
+Hardware Saturation | Poor. Low hardware queue depth utilization due to blocking calls. | Poor. Threads still stall per call, forcing an effective Queue Depth (QD) of 1. | Excellent. Batches requests to exploit thousands of concurrent NVMe queues.  
+
+---
+
+## When to Use What
+
+### 1. Standard (Buffered) I/O
+* **When to use**: General-purpose applications, configuration filing, small or irregular asset loading, and workloads that benefit heavily from OS read-ahead caching.
+* **Why**: The OS masks layout complexities. If your data structures are small or unaligned, standard buffered streams prevent severe performance degradation by handling the underlying read-modify-write mechanics for you.  
+
+### 2. Direct I/O (O_DIRECT)
+* **When to use**: Databases, heavy append-only logging systems, or custom storage engines where you have already built a highly optimized user-space cache system.
+* **Why**: It prevents "double caching" (storing data in both your application memory and the kernel page cache). It reduces CPU usage by dropping kernel memory copies, but forces your software to meticulously align every transaction to 4096-byte boundaries.
+
+### 3. `io_uring`
+* **When to use**: High-throughput backend systems, network proxies, or high-performance storage runtimes (like voxel streaming engines or multi-threaded asset parallel pipelines) that must handle thousands of concurrent read/write requests without bottlenecking the CPU.
+* **Why**: It completely resolves the Queue Depth = 1 problem of synchronous calls. By utilizing a submission and completion ring shared directly between user space and the Linux kernel, it allows you to fire off thousands of operations in a single batch, minimizing context switches and fully saturating PCIe/NVMe lanes.
+
+---
+
+## Asynchronous `io_uring` File Writing Example
+The following example demonstrates how to initialize an `io_uring` instance, prepare a write request using an aligned buffer, submit it asynchronously to the kernel, and harvest the completion event.
+
+```cpp
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <liburing.h>
+#include <stdexcept>
+
+constexpr size_t QUEUE_DEPTH = 32;
+constexpr size_t BLOCK_SIZE = 4096;
+
+int main() {
+  const char* filename = "async_uring_output.dat";
+  
+  // 1. Initialize the io_uring instance
+  struct io_uring ring;
+  if (io_uring_queue_init(QUEUE_DEPTH, &ring, 0) < 0) {
+    std::cerr << "Fatal: Failed to initialize io_uring queue.\n";
+    return 1;
+  }
+
+  // 2. Open file with O_DIRECT (optional, but forces zero-copy behavior)
+  int fd = ::open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_DIRECT, 0644);
+  if (fd < 0) {
+    std::cerr << "Failed to open file: " << strerror(errno) << "\n";
+    io_uring_queue_exit(&ring);
+    return 1;
+  }
+
+  // 3. Allocate page-aligned memory for O_DIRECT requirements
+  void* buffer = nullptr;
+  if (posix_memalign(&buffer, BLOCK_SIZE, BLOCK_SIZE) != 0) {
+    std::cerr << "Memory alignment allocation failed.\n";
+    ::close(fd);
+    io_uring_queue_exit(&ring);
+    return 1;
+  }
+
+  // Populate the buffer with sample data
+  std::memset(buffer, 'A', BLOCK_SIZE);
+
+  // 4. Get a Submission Queue Entry (SQE)
+  struct io_uring_sqe* sqe = io_uring_get_sqe(&ring);
+  if (!sqe) {
+    std::cerr << "Could not retrieve a submission queue entry.\n";
+    std::free(buffer);
+    ::close(fd);
+    io_uring_queue_exit(&ring);
+    return 1;
+  }
+
+  // 5. Prepare an asynchronous write operation
+  // This tells io_uring to write 'BLOCK_SIZE' bytes from 'buffer' into 'fd' at offset 0
+  io_uring_prep_write(sqe, fd, buffer, BLOCK_SIZE, 0);
+
+  // Attach custom user-data to identify this specific request upon completion
+  uint64_t request_id = 0xDEADC0DE;
+  io_uring_sqe_set_data(sqe, reinterpret_cast<void*>(request_id));
+
+  // 6. Submit the request to the kernel
+  // Unlike synchronous write(), this call returns instantly while the hardware processes the request.
+  int submitted = io_uring_submit(&ring);
+  if (submitted < 0) {
+    std::cerr << "Failed to submit I/O request: " << strerror(-submitted) << "\n";
+    std::free(buffer);
+    ::close(fd);
+    io_uring_queue_exit(&ring);
+    return 1;
+  }
+
+  std::cout << "I/O request submitted successfully. Proceeding with other async operations...\n";
+
+  // 7. Wait for the Completion Queue Event (CQE)
+  struct io_uring_cqe* cqe = nullptr;
+  int wait_result = io_uring_wait_cqe(&ring, &cqe);
+  if (wait_result < 0) {
+    std::cerr << "Error waiting for completion event: " << strerror(-wait_result) << "\n";
+  } else {
+    // Validate the completion status
+    if (cqe->res < 0) {
+      std::cerr << "Asynchronous write failed internally: " << strerror(-cqe->res) << "\n";
+    } else {
+      std::cout << "Async write completed! Bytes processed: " << cqe->res << "\n";
+      
+      // Read back our tracking token
+      uint64_t returned_token = reinterpret_cast<uintptr_t>(io_uring_cqe_get_data(cqe));
+      std::cout << "Verified Request Token: 0x" << std::hex << returned_token << std::dec << "\n";
+    }
+    
+    // Clear the entry out of the completion ring
+    io_uring_cqe_seen(&ring, cqe);
+  }
+
+  std::free(buffer);
+  ::close(fd);
+  io_uring_queue_exit(&ring);
+  return 0;
+}
+```
