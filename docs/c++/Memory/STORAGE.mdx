@@ -27,7 +27,7 @@ Memory alignment is very important for high throughput.
 
 If your memory buffer or file offset is misaligned, the consequences depend on how you opened the file:
 
-#### Standard I/O (Using the OS Page Cache)
+#### Standard I/O
 If you use standard system calls or `std::fstream`, the OS masks the alignment issue for you, but you pay a silent performance penalty called a **Read-Modify-Write** (RMW) cycle
 
 If you try to write a 4KB chunk of data that spans across two physical sectors:
@@ -35,7 +35,7 @@ If you try to write a 4KB chunk of data that spans across two physical sectors:
 2. It **modifies** the specific bytes in memory with your new data.
 3. It **writes** both 4KB sectors back to the disk.
 
-#### Direct I/O (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+#### Direct I/O
 If you **bypass** the OS **look-ahead cache** for maximum performance using Direct I/O, the OS stops holding your hand. **Misalignment will cause the I/O system call to fail completely.**
 
 Using `O_DIRECT` can give you better performance since it will not use the OS level cache but instead use **vendor-specific hardware implementation**. This reduces the number of **cpu cycles** during reads.
