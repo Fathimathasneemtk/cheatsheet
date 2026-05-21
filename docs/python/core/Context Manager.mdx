@@ -1,0 +1,160 @@
+# Context Manager in Python
+
+
+* Python's context mangers provide nice way to automatically **set up and clean up resources**, ensuring they are properly managed even aftetr error occurs.
+
+## Why do we need Context Manager ?
+
+* **Automatic cleanup** : Frees resources(close file) like files or db connections without manual effort.eg : GL
+* **Avoid resource leaks** : Ensure proper release(close file) even if error occur.
+* **Cleaner code** : Replaces verbos like try-finally blocks with **with**.
+* **Exception safe** : Always perform cleanup, even on exceptions.
+* **Custom control** : Lets you manage any resource using `__enter__` and `__exit__`.
+
+## Risk of Not Closing Resource
+
+* Failing to close resources like files will leads to serious problems like exhausting available system file disrcriptors.This will cause the program or even the entire system to crash .
+* **Discriptor** - Claim **ticket or token** the Os gives to programs when the program asks access to OS for the interaction of file, db, network connection.
+
+```py
+file_descriptors = []
+for x in range(100000):
+    file_descriptors.append(open('test.txt', 'w'))
+
+```
+This will raise 
+
+```
+Traceback (most recent call last):
+  File "context.py", line 3, in 
+OSError: [Errno 24] Too many open files: 'test.txt'
+```
+This happens bcz of somany files are left open without being closed.
+
+## Built-in Context Manger for File Handling
+
+The **with** statement provide builtin context manger that ensures file is automatically closed once you are done with it, even if error occurs.
+
+```py
+with open("file1.txt") as f:
+    data=f.read()
+
+```
+Here we dont wants excplicitly call f.close() and protects aganist resource leakage.
+
+## Creating Custom Context Manager Class
+
+A Class based context manger has 2 methods,
+
+*` __enter__()` : sets up the resource and returns it
+* `__exit__()` : cleanup the resources eg:closes file
+* Example: Shows how Python initializes the object , enters context and runs the block and then exits while cleaning up.
+
+```py
+
+Class ContextManger:
+    def __init__(self):
+        print("Iniit method called")
+
+    def __enter__(self):
+        print("enter menthod called")
+        return self
+
+    def __exit__(self,exc_type,exc_value,exc_traceback):
+        print("exit method called")
+
+with ContextManager() as manager:
+    print("with statement block")
+
+```
+**output**
+
+```py
+init method called
+enter method called
+with statement block
+exit method called
+```
+
+**Explanation**
+* `__init__` : initailizes object
+* `__enter__`: runs at the start of the with block and returns the object.
+* The block executes (print statement)
+* `__exit__` : This is called afetr the blocks ends to handle cleanup
+
+
+### A.File Management Using Context Manager
+
+Here a FileManager class to handling opening, reading/writing and automatically closing file.
+
+**Example**
+
+```py
+
+class FileManager:
+    def __init__(self,mode,filename):
+        self.filename=filename
+        self.mode=mode
+        self.file=None
+
+    def __enter__(self):
+        self.file=open(self.filename,self.mode)
+        return self.file
+
+    def __exit__(self,exc_type,exc_value,exc_traceback):
+        self.file.close
+
+
+with FileManager('test.txt','w') as f:
+    f.write("Test")
+
+print(f.closed)
+
+```
+
+**output**
+
+True
+
+**Explanation**
+
+* `__enter__()` opens the file and retruns it
+* Inside the with block , use the file object
+* `__exit__()` ensures the file closed automatically.
+* `print(f.closed)` confirms the file is closed.
+
+
+### Database Connection Management with Context Manager
+
+Here is a simple database connection management sysytem. The number of db connections opens at a time is limited. So we need context managers to help this out.
+
+```py
+
+from pymongo import MongoClient
+
+class MongoDbConnectionManager:
+    def __init__(self,hostname,port):
+        self.hostname=hostname
+        self.port=port
+        self.connection=None
+
+    def __enter__(self):
+        self.connection=MongoClient(self.hostname, self.port)
+        return self.connection
+
+    def __exit__(self,exc_type,exc_value,exc_traceback):
+        self.connection.close()
+
+with MongoDBConnectionManager('localhost',5432) as mongo:
+    collection=mongo.SampleData.test
+    data= collection.find_one({'__id':1})
+    print(data.get('name'))
+
+```
+
+**Explanation**
+
+* `__enter__()` opens MongoDB connection
+* mongo inside with block is the client(here mongo) object
+* You can perform database operations
+* `__exit__()` closes the connection automatically.
