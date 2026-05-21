@@ -129,7 +129,7 @@ Chaining generators (built by passing one generator into another.) , to process 
 1. ### ``` yield from ```
     ``` yield from ``` is a shortcut used inside the generator to yield all values from another iterable (list,tuple, or another generrator) without using the ```for ``` loop.
     * old way 
-    ```
+    ```py
     def combine_lists_old():
     list_a = [1, 2]
     list_b = [3, 4]
@@ -147,7 +147,7 @@ Chaining generators (built by passing one generator into another.) , to process 
         print(x)  # Outputs: 1, 2, 3, 4
     ```
     * The cleaner way 
-     ```
+     ```py
      def combine_lists_new():
     list_a = [1, 2]
     list_b = [3, 4]
