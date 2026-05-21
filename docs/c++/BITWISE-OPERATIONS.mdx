@@ -22,6 +22,11 @@ constexpr uint64_t N = 16;       // The power of two value
 
 static_assert(std::has_single_bit(N), "N must be a power of two");
 
+template <uint64_t T>
+concept PowerOfTwo = requires (T n) {
+  std::has_single_bit(n);
+};
+
 // divide: a / N
 uint64_t divide(uint64_t a)
 {
@@ -38,6 +43,14 @@ uint64_t multiply(uint64_t a)
 uint64_t modulus(uint64_t a)
 {
   return a & (N - 1);
+}
+
+// Get the next multiple of n
+template <uint64_t N>
+requires PowerOfTwo<N>
+uint64_t nextMultipleOf(uint64_t value)
+{
+  return (value + N - 1) & ~(N - 1);
 }
 ```
 

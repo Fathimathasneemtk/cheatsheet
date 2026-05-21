@@ -422,13 +422,21 @@ template <typename Collection>
 concept SequenceCont =
   std::ranges::range<Collection> &&
   requires (std::remove_cvref_t<Collection> c, std::ranges::range_value_t<Collection> v) {
+    
+    typename std::remove_cvref_t<Collection>::value_type;       // Must have a value_type
+    typename std::remove_cvref_t<Collection>::iterator;         // Must have an iterator type
+    typename std::remove_cvref_t<Collection>::const_iterator;   // Must have an iterator type
+    
     c.push_back(v);         // Can I push back?
-    c.pop_back(v);          // Can I pop back?
+    c.pop_back();           // Can I pop back?
+    
     c.insert(c.begin(), v); // Can I insert by passing an iterator and a value?
     c.erase(c.begin());     // Can I erase by passing an iterator?
     c.clear();              // Can I clear?
+    
     std::remove_cvref_t<Collection>{v,v,v}; // Can I call the constructor this way?
-    c = {v,v,v}                             // Can I have an assignment?
+    c = {v,v,v};                            // Can I have an assignment?
+    
     {c < c} -> std::convertible_to<bool>;   // Can I compair with less than and does it return a bool?
   };
 ```

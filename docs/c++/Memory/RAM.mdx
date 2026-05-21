@@ -1,0 +1,438 @@
+---
+toc_min_heading_level: 2
+toc_max_heading_level: 4
+---
+
+# RAM
+
+To write maximum-performance systems software, you must treat RAM not as a flat, uniform array of bytes, but as a deeply pipelined, highly volatile hardware topology. Hardware optimizations (like CPU caches, prefetchers, and memory controllers) can accelerate your code by orders of magnitude—or cripple it through cache thrashing, alignment faults, and bus contention.
+
+---
+
+## Hardware Architecture & DRAM Topology
+
+| Layer / Component | Operational Unit | Latency (Approximate) | Characteristics |
+| :--- | :--- | :--- | :--- |
+| **L1 Cache (Data/Inst)** | 32 KB - 48 KB per core | ~1 ns (4-5 clock cycles) | Ultra-fast static RAM (SRAM) tied directly to execution ports. |
+| **L2 Cache** | 512 KB - 1 MB per core | ~3-4 ns (12-14 clock cycles) | Dedicated per-core or tightly shared intermediate SRAM cache. |
+| **L3 Cache (LLC)** | 16 MB - 96 MB+ shared | ~12-20 ns (40-60 clock cycles) | Large, Last-Level Cache shared across all cores on a silicon die. |
+| **Main Memory (DRAM)**| Gigabytes | ~60-100 ns (200+ clock cycles) | Dynamic RAM using capacitors. High capacity but massive latency penalty. |
+
+---
+
+## The Cache Line and Memory Alignment
+
+The CPU never fetches individual bytes from main memory. It moves data in fixed-size blocks called **Cache Lines**, which are almost universally **64 bytes** wide.
+
+### 1. Spatial and Temporal Locality
+* **Spatial Locality**: Storing data structures sequentially in memory ensures that when the first item is loaded, the subsequent elements are fetched into the L1 cache within the same 64-byte line for free.
+* **Temporal Locality**: Accessing the same memory address repeatedly ensures it stays residency locked within the fastest L1/L2 cache tiers before being evicted.
+
+### 2. Struct Padding and Aligned Access
+Modern CPUs are hardwired to execute memory operations on addresses that match the natural boundary of the data type (e.g., a 4-byte `uint32_t` should start at an address divisible by 4). 
+If an object or primitive straddles a 64-byte cache line boundary:
+* The CPU must execute **two separate cache transactions** to assemble a single primitive.
+* In multi-threaded environments, this causes severe atomic bus locking or cache line split penalties.
+
+---
+
+## Performance Bottlenecks & Fixes
+
+### 1. False Sharing (Cache Line Contention)
+False sharing occurs when two independent threads running on different cores modify distinct variables that happen to reside within the *same 64-byte cache line*. 
+Even though the threads never access the same data, the hardware cache coherency protocol (e.g., MESI) is forced to invalidate the entire cache line across both cores every time either thread writes. This bounces the cache line back and forth via the interconnect bus, decimating multi-threaded scaling.
+
+> **The Fix:** Use explicit alignment tags (`alignas(64)`) or standard definitions like `std::hardware_destructive_interference_size` to force independent multi-threaded variables onto isolated cache lines.
+
+### 2. Virtual Memory & Physical Memory & Translation Lookaside Buffer
+
+When you allocate memory in C++ (like creating a `new` object or a `std::vector`), the operating system doesn't give you direct access to the physical 
+copper lines and pins on your RAM sticks. Instead, it hands your program a [**Virtual Address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address).
+
+Every single application running on your computer thinks it has its own private, massive sandbox of memory. 
+The hardware component responsible for making this trick work is the **MMU (Memory Management Unit)** inside your CPU.
+
+Virtual memory maps application addresses to physical RAM layouts using page tables. To skip slow page-table parsing, 
+the CPU caches recent lookups in the **TLB**. Standard Linux memory pages are **4 KB**. If an application references highly 
+fragmented **pointer soup** scattered across gigabytes of memory, it triggers rampant TLB cache evictions (TLB misses), forcing slow kernel page-table walks. This 
+happens for both **ITLB** & **DTLB**
+
+* **The Page Table**: To translate your program's [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) (e.g., `0x7FFF54B2`) into the actual location on the physical RAM stick (e.g., `0x1A2B3C4D`), 
+the OS maintains a map in physical RAM called a **Page Table**.
+* **The Scale**: Because mapping individual bytes would make the map larger than the RAM itself, the OS groups physical RAM into discrete **4 KB chunks called Page**s.
+* **Instructions**: Instructions are stored in RAM and have [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address)
+* **Data**: Data is stored in RAM and has [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address).
+
+Both **instructions & data** [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) are fetched by the **MMU** into **ITLB** & **DTLB**.
+
+#### 1. DTLB (Data Translation Lookaside Buffer)
+Caches virtual-to-physical translations for data addresses (your variables, arrays, buffers, and heap allocations).
+
+* **Location**: Found in the L1 cache
+
+* **The Fragmentation Trap:** Iterating over a linked list or an un-optimized pointer-heavy tree (where nodes were allocated via individual `malloc` calls over time) 
+scatters data across different 4 KB pages. Every pointer hop hits a new page, knocking older pages out of the DTLB, the CPU triggers **DTLB Misses**. This forces 
+the data fetch pipeline to stall completely while the **MMU** resolves where the data resides, forcing slow kernel page-table walks.
+
+* **The Fix:** Package data structures into contiguous arrays (`std::vector` or custom arena allocators). This ensures hundreds of elements are packed into a single 4 KB page, allowing a single DTLB entry to cover thousands of sequential operations.
+
+#### 2. ITLB (Instruction Translation Lookaside Buffer)
+Caches virtual-to-physical translations for **executable code instructions**. Compiled machine instructions are saved as [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) too, 
+living inside the executable `.text` segment.
+
+* **Location**: Found in the L1 cache
+
+* **The Fragmentation Trap:** If your code path frequently jumps across deeply **nested dependencies**, massive **shared libraries**, or highly fragmented 
+instruction paths (like **virtual method tables** or **heavy callback loops**). Instructions are also stored as [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) across different 4 KB 
+pages. Every pointer hop hits a new page, knocking older pages out of the ITLB, the CPU triggers **ITLB Misses**. This forces the instruction fetch pipeline 
+to stall completely while the **MMU** resolves where the machine code resides, forcing slow kernel page-table walks.
+
+* **The Fix:** Compile performance-critical systems with Link-Time Optimization (`-flto`) and Profile-Guided Optimization (`-fprofile-generate`/`-fprofile-use`). This forces the compiler to physically reorder hot execution paths right next to each other in memory, maximizing instruction page density.
+
+#### 3. STLB (Shared Translation Lookaside Buffer)
+The final defense line before hitting physical RAM. It is unified—storing both data and instruction address mappings. It is much larger (typically 1024 to 2048+ entries) but operates slightly slower (~4-8 clock cycles).
+
+* **Location**: Found in the L2 cache
+
+* **The Performance Cliff:** If an application suffers from severe DTLB and ITLB fragmentation simultaneously, data and code translations will aggressively compete for slots inside the STLB. They will continuously evict each other, trapping the CPU in a continuous cycle of **Hardware Page Table Walks** (costing 100-200+ cycles per miss).
+
+* **The Fix:** Back your critical allocations with **Huge Pages** (2 MB or 1 GB pages). Moving from 4 KB pages to 2 MB Huge Pages multiplies the coverage area of a single TLB slot by **512x**, completely eliminating STLB exhaustion.
+
+---
+
+## Complete, High-Performance C++ Code Examples
+
+### 1. Exploiting Spatial Cache Locality (Row vs. Column Major)
+This complete program demonstrates the massive performance difference between cache-friendly sequential access (Row-Major) and cache-shredding strided access (Column-Major) across a large 2D matrix.
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <numeric>
+
+constexpr size_t MATRIX_SIZE = 8192;
+
+void run_row_major(const std::vector<uint32_t>& matrix, size_t size) {
+  uint64_t sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // Cache-Friendly: Accessing elements sequentially along the cache line
+  for (size_t r = 0; r < size; ++r) {
+    for (size_t c = 0; c < size; ++c) {
+      sum += matrix[r * size + c];
+    }
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+  std::cout << "Row-Major (Sequential) Time: " << duration.count() << " ms | Sum: " << sum << "\n";
+}
+
+void run_column_major(const std::vector<uint32_t>& matrix, size_t size) {
+  uint64_t sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // Cache-Hostile: Accessing elements via massive strides (skipping full rows)
+  for (size_t c = 0; c < size; ++c) {
+    for (size_t r = 0; r < size; ++r) {
+      sum += matrix[r * size + c];
+    }
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+  std::cout << "Column-Major (Strided) Time: " << duration.count() << " ms | Sum: " << sum << "\n";
+}
+
+int main() {
+  std::cout << "Allocating and initializing a " << MATRIX_SIZE << "x" << MATRIX_SIZE << " matrix...\n";
+  std::vector<uint32_t> matrix(MATRIX_SIZE * MATRIX_SIZE);
+  std::iota(matrix.begin(), matrix.end(), 1);
+
+  // Warm up cache
+  volatile uint64_t warm = std::accumulate(matrix.begin(), matrix.begin() + 1000, 0ULL);
+  (void)warm;
+
+  run_row_major(matrix, MATRIX_SIZE);
+  run_column_major(matrix, MATRIX_SIZE);
+
+  return 0;
+}
+```
+
+### 2. Eliminating False Sharing in Multi-Threaded Code
+This program allocates adjacent atomic counters shared across multiple workers. It demonstrates how unaligned data stalls threads due to cache line bouncing, and how explicit alignment mitigates it entirely.
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <chrono>
+
+constexpr uint64_t ITERATIONS = 50'000'000;
+
+// Hostile Layout: Multiple threads hammer variables grouped inside the exact same cache line.
+struct FalseSharingCacheLine {
+  std::atomic<uint64_t> value{0};
+};
+
+// Optimal Layout: Explicitly isolates each thread's variable onto its own cache line boundary.
+struct alignas(64) CleanCacheLine {
+  std::atomic<uint64_t> value{0};
+};
+
+template <typename T>
+void worker(T& counter) {
+  for (uint64_t i = 0; i < ITERATIONS; ++i) {
+    counter.value.fetch_add(1, std::memory_order_relaxed);
+  }
+}
+
+int main() {
+  unsigned int hardware_threads = std::thread::hardware_concurrency();
+  if (hardware_threads < 2) {
+    std::cout << "Benchmark requires at least 2 hardware threads to show contention.\n";
+    return 0;
+  }
+  
+  size_t active_workers = 2; // Test with two active threads fighting for lines
+  std::cout << "Running cache line contention benchmark with " << active_workers << " threads...\n";
+
+  {
+    std::vector<FalseSharingCacheLine> bad_counters(active_workers);
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < active_workers; ++i) {
+      threads.emplace_back(worker<FalseSharingCacheLine>, std::ref(bad_counters[i]));
+    }
+    for (auto& t : threads) t.join();
+    auto end = std::chrono::high_resolution_clock::now();
+    
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "False Sharing (Unaligned) Layout Duration: " << duration.count() << " ms\n";
+  }
+
+  {
+    std::vector<CleanCacheLine> good_counters(active_workers);
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < active_workers; ++i) {
+      threads.emplace_back(worker<CleanCacheLine>, std::ref(good_counters[i]));
+    }
+    for (auto& t : threads) t.join();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "Clean Cache Isolation (Aligned) Layout Duration: " << duration.count() << " ms\n";
+  }
+
+  return 0;
+}
+```
+
+### 3. Manual Alignment and Explicit Software Prefetching
+For critical hot loops dealing with large non-linear data traversal (e.g., walking trees or jumping nodes), the hardware prefetcher can fail. This complete program shows how to safely allocate memory aligned to 64-byte boundaries and issue explicit instruction prefetch hints via intrinsic compilers.
+
+```cpp
+#include <iostream>
+#include <cstdlib>
+#include <new>
+#include <chrono>
+#include <vector>
+
+constexpr size_t ALIGNMENT = 64; // Cache Line Alignment
+constexpr size_t ELEMENT_COUNT = 16'777'216; // 16M elements
+
+struct alignas(64) Node {
+    uint64_t data;
+    uint64_t padding[7]; // Fill up exactly one 64-byte cache line
+};
+
+int main() {
+  // Correctly allocate an array of aligned elements safely via modern C++
+  // This guarantees the base address starts perfectly on a cache-line boundary
+  Node* array = static_cast<Node*>(std::aligned_alloc(ALIGNMENT, ELEMENT_COUNT * sizeof(Node)));
+  if (!array) {
+    std::cerr << "Aligned allocation failed\n";
+    return 1;
+  }
+
+  // Initialize data
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    array[i].data = i;
+  }
+
+  // Allocate a random look-ahead stride index map to bypass standard sequential hardware tracking
+  std::vector<size_t> indices(ELEMENT_COUNT);
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    // Pseudo-random stride step to defeat standard look-ahead prefetchers
+    indices[i] = (i * 101) % ELEMENT_COUNT;
+  }
+
+  uint64_t total_sum = 0;
+  auto start = std::chrono::high_resolution_clock::now();
+
+  for (size_t i = 0; i < ELEMENT_COUNT; ++i) {
+    // Look-ahead explicit prefetch instruction hint (e.g., 16 iterations in advance)
+    if (i + 16 < ELEMENT_COUNT) {
+      #if defined(__GNUC__) || defined(__clang__)
+      // __builtin_prefetch(address, rw_flag, locality_importance)
+      // rw_flag = 0 (Read), locality = 3 (Keep in L1 cache high priority)
+      __builtin_prefetch(&array[indices[i + 16]], 0, 3);
+      #endif
+    }
+    total_sum += array[indices[i]].data;
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+
+  std::cout << "Custom Index Jump Sum: " << total_sum << "\n";
+  std::cout << "Execution time with software prefetching: " << duration.count() << " ms\n";
+
+  std::free(array);
+  return 0;
+}
+```
+
+## Loading a 32 bit integer into the CPUs
+
+When you read a 32-bit integer, both the 4 KB page (only the [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) mapping) and 64 byte cache line is loaded into memory, 
+but they happen at completely different levels of the hardware hierarchy to solve two entirely different problems.
+
+* You **load** the **64-byte cache line** into the **L1 Data Cache** (**SRAM**).
+* You **load** the **4 KB page** into the **TLB** to map the [**virtual addresses**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) to physical addresses.
+
+### 1. The Virtual Map
+
+Before the CPU can even think about pulling data out of a cache or physical RAM, 
+it needs to translate the **virtual pointer** of that **32-bit integer** into a **physical location on the RAM** stick.
+
+1. The **MMU** looks up the [**virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) in the L1 **DTLB**.
+2. If it misses, it checks the **STLB**. If that misses, it performs a [**hardware page walk**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) across the **4 KB page tables stored in DRAM**. 
+3. Once found, the **mapping** for that entire **4 KB page** is **cached in the TLB**. Only the translation map is loaded into the TLB, not the whole 4 KB of data.
+
+*NOTE: This happens for instructions too (**ITLB in L1 Instruction Cache**)*
+
+::::info
+**Page-table walk**
+
+Read from [**Virtual address**](/cheatsheet/docs/c++/Memory/RAM#virtual-address) till [**CR3 Register**](/cheatsheet/docs/c++/Memory/RAM#the-cr3-register)
+to understand what **page-table walk** is and how we find the correct page on RAM when it's not in **TLB**
+::::
+
+### 2. The Data Fetch
+
+Now that the **MMU** knows the real physical address of your 32-bit integer, it goes to fetch the actual bytes.
+
+* The CPU never fetches a lonely 4-byte integer by itself. It always pulls data in fixed blocks of **64 bytes** (a **Cache Line**).
+* The CPU checks the **L1 Data Cache** to see if that physical 64-byte block is already sitting on the chip.
+* If it's a cache miss, the CPU pulls that entire **64-byte cache line** from the L2 cache, L3 cache, 
+or directly from the physical RAM stick, and **copies** it directly into the **L1 Data Cache**.
+
+*NOTE: This happens for instructions too (**L1 Instruction Cache**)*
+
+### 3. Execution
+
+The 32-bit integer (4 bytes) is extracted out of that 64-byte cache line sitting in the L1 cache and loaded directly into one of the 
+CPU's general-purpose execution registers (like `rax` or `eax`).
+
+### Reality check
+For just a 32 bit integer (something trivial, short-lived, and not referenced by anyone), what actually happens is the compiler will optimize it and load it directly into a register like `eax`, `ebx`
+
+```cpp
+int main()
+{
+  int total = 0;
+
+  for (int i = 0; i < 1000; ++i)
+    total += i;
+  
+  return total;
+}
+```
+
+A modern optimizing compiler (like GCC or Clang with `-O2` or `-O3`) will look at `total` and `i` and realize: 
+*"These variables are short-lived, used constantly, and nobody is asking for their memory addresses."*
+
+* **The Reality**: The compiler will map `total` directly to a hardware register (like `%ebx`) and `i` to another register (like `%ecx`). In this particular example, it will just return the result `1000`.
+* **The Performance**: The numbers are updated directly inside the CPU silicon. For this entire loop, **RAM, 64-byte cache lines, 4 KB pages, 
+and the TLB do not exist**. The 32-bit integers live purely as electrical states inside the core's register file.
+
+## Virtual address
+
+### 1. The pointer
+A 64-bit virtual address pointer isn't just a random hexadecimal number. The CPU hardware splits the bits of that pointer 
+into distinct structural segments to locate everything it needs.
+
+For a standard 4 KB page setup on an x86-64 processor, only the lower 48 bits of a pointer are actually used. 
+The CPU reads those bits from right to left like a set of GPS coordinates:
+
+```
+64-bit Pointer: [ 16 Bits Unused ]  [       36 Bits: Page Number       ] [ 12 Bits: Offset ]
+                                    |--- Index ---|--- Tag (Unique) ---|
+                                           |
+                                           v
+                               +-----------------------+
+                               |    CPU Core L1 TLB    |
+                               +-----------------------+
+                               | Set 0: [ Tag | Phys ] |
+                               | Set 1: [ Tag | Phys ] |  <-- CPU goes straight here
+                               | Set 2: [ Tag | Phys ] |      using the Index bits!
+```
+
+* **The Offset (Lower 12 bits)**: 2^12 = 4096 bytes (exactly 4 KB). These bits point to the precise byte location inside the page. 
+Because the offset is identical in both virtual and physical memory, the CPU doesn't touch these bits during translation.
+
+* **The Page Number (Upper 36 bits)**: This tells the CPU which 4 KB page this address belongs to. The CPU splits these bits further into an **Index** and a **Tag**.
+
+### 2. Walking Into the TLB Array
+The **TLB** on your CPU chip is organized as a hardware array (typically set-associative, exactly like a CPU data cache).
+
+* **Direct Hardware Mapping**: When your program attempts to read a pointer, the CPU takes the **Index** bits from the pointer 
+and uses them as a direct hardware offset to jump straight to a specific row (or "**set**") inside the TLB array.
+* **The Tag Check**: Once it lands on that row, it compares the remaining Tag bits of your pointer against the tags stored in that hardware slot.
+* **The Verdict:**
+  * **TLB Hit**: If the tags match, the hardware instantly releases the physical address mapped to that slot.
+  * **TLB Miss**: If the slot is empty or the tags don't match, the CPU triggers a hardware miss and forces the **MMU** to perform a page-table walk.
+
+::::info
+**Direct Hardware Mapping**: What is a set?
+
+Because of how the hardware math works (using the Index bits), thousands of different virtual pages will map to the exact same set. However, a set can only hold a few entries at a time (determined by the "associativity" of your TLB, like 4-way or 8-way).
+
+**A 2-Way Set-Associative TLB example:**
+
+Imagine your TLB has 64 sets, and each set has 2 slots (2-way associative).
+
+**The Conflict**: Virtual Page #5, Virtual Page #69, and Virtual Page #133 all happen to have the exact same `Index` bits. Therefore, they are all forced to use Set 5.
+
+**The Capacity**: Because it is a 2-way TLB, Set 5 only has 2 physical slots available.
+
+**The Result**: Set 5 can hold the translation for Page #5 and Page #69 simultaneously. But if your program suddenly needs Page #133, it will look in Set 5, see that the **Tags** don't match (a **TLB Miss**), and **evict either Page #5 or #69 to make room**.
+::::
+
+### The CR3 Register
+If it's a TLB miss, how does the **MMU** know where to look in **RAM** to find the **Master Page Table** maps for your specific program?
+
+Every time the Linux kernel **switches context** to run your program, it configures a special, 
+dedicated hardware control register inside your CPU core called **`CR3`** (**Control Register 3**).
+
+::::info
+**CPU scheduler & context switches:**
+  * **Process Context Switch**: Changes `CR3` -> invalidates/bypasses old TLB entries -> forces heavy MMU page walks to rebuild the cache for the new application.
+  * **Thread Context Switch**: Leaves `CR3` alone -> preserves the TLB cache -> keeps address translation running at maximum clock-cycle efficiency.
+::::
+
+* The `CR3` register holds the **raw physical address** of your application's **Master Page Table** directory in RAM.
+* When a **TLB miss occurs**, the **MMU** bypasses all virtual memory. It reads the physical base address directly out of the `CR3` register, 
+uses the upper bits of your pointer to walk down the multi-level page table tree in DRAM (**page-table walk**), finds the translation, and loads it into the **TLB** slot for next time.
+
+### Master Page Table
+In operating systems, a **Master Page Table** (often referred to as a root page table, page directory, or PGD) is 
+the top-level structure in a multi-level paging system. It maps a process's virtual memory to the lower-level page tables, 
+which ultimately point to physical memory frames.
