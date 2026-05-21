@@ -1,5 +1,3 @@
-1. Advanced Memory Management & Hardware Architecture
-High-performance C++ is less about syntax and more about hardware cache lines and memory layout.
 
 Cache Locality & False Sharing: Understanding L1/L2/L3 cache lines (usually 64 bytes). Knowing how std::hardware_destructive_interference_size prevents false sharing in multithreaded environments.
 
