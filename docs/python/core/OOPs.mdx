@@ -1,0 +1,245 @@
+# OOPs
+
+* OOP is a way of organizing code that uses classes and objects to represent real world entities and their behavior.
+* Object has attribute thing that has specific data and can perform certain actions using methods.
+* Organizes code into object and classes
+* Supports encapsulation which group data and methods together.
+* Enables inheritance for resusability and heirarchy
+* Allows Polymorphism for flexible method implementation
+* Improves modularity, scalabilty and maintainabilty.
+
+
+## Class
+
+Class is the collection of objects. Class defines a set of attributes and methods which the created objects have.
+
+* Classes are created by keyword `class`
+* Attributes are the variable belongs to a class.
+* Attributes are always public and can be accessed by using dot(.) operator.
+* **class attribute** is shared by all instance of the class.
+*  `__init__()`  is a constructor method which runs automatically when a new instance is created.It is used to initialize object data.
+*  `self` represents current object allowing each instance to store and access its own data.
+*  **instance attribute** is unique to each objects of the class. 
+
+```py
+
+class Dog:
+    species = 'Canine' # class attribute
+
+    def __init__(self,name,age):
+        self.name=name # instance attribute
+        self.age=age # instance attribute
+
+```
+
+## Objects
+
+Object is the instance of the class , each object holds its own data.he objects consists  of
+
+
+* **State** : It is represented by the attributes and refelects the properties of an object.
+* **Behavior** : It is represented by the methods of an object, and reflects the response of an object to other objects.
+* **Identity** : It gives a unique name to an object and enables one object to interact with other objects.
+
+```py 
+# 1. We create the objects
+my_phone = Smartphone("iPhone 15")
+abhishek = Person("Abhishek")
+
+# 2. The interaction happens
+abhishek.call_friend(my_phone)
+```
+
+## Creating of an object
+
+```py
+class Dog:
+    species = "Canine"  # Class attribute
+
+    def __init__(self, name, age):
+        self.name = name  # Instance attribute
+        self.age = age  # Instance attribute
+
+# Creating an object of the Dog class
+dog1 = Dog("Buddy", 3)
+
+print(dog1.name) 
+print(dog1.species)
+
+```
+
+sFour Pillars of OOP
+
+## 1. Inheritance
+   Inheritance allows a class to acquire properties and methods of another class.It promotes code reuse and hierarchical classification.
+
+**TYPES OF DIFFERENT INHERITANCE**
+
+### A. Single Inheritance
+ A single child inherits from a parent parent class.
+
+```py
+class Parent:
+    def feature_one(self):
+        return  "Feature 1 from Parent"
+
+class Child(Parent):
+    def feature_two(self):
+        return "Feature 2 from Child"
+
+obj=Child()
+print(obj.feature_one()) # Feature 1 from Parent ----- Inherited
+
+```
+
+### B. Multiple Inheritance
+This is where a child class inherits from **more than one Parent class**.
+
+**NOTE**:This is superpower unique to C++, Python .Java doesn't allow this because it can cause problem known as **Diamond Problem**(Child class wouldn't know which parent's method to run if they both had same name).Python solves this using an order system called **MRO(Method Resolution Order)**.
+
+```py
+class Father:
+    def skills(self):
+        return "Coding"
+
+class Mother:
+    def hobbies(self):
+        return "Painting"
+
+class Child(Father, Mother):  # Inherits from BOTH
+    pass
+
+kid = Child()
+print(kid.skills())   # From Father: Coding
+print(kid.hobbies())  # From Mother: Painting
+
+```
+### C. Multilevel Inheritance
+A child class inherits from a parent class , which in turn inherits form a grandparent class.
+
+```py
+class Grandparent:
+    def land(self):
+        return "Owned 100 acres"
+
+class Parent(Grandparent):
+    def house(self):
+        return "Built a house on the land"
+
+class Child(Parent):
+    def car(self):
+        return "Bought a car to park at the house"
+
+kid = Child()
+print(kid.land())   # Trickled down from Grandparent
+print(kid.house())  # Trickled down from Parent
+
+
+```
+
+### D. Hierarchical Inheritance
+One parent class serves as the base for **multiple child classes**.The child shares the parent features, but they dont share feartures each other.
+
+```py
+class Vehicle:
+    def info(self):
+        return "This is a transport vehicle."
+
+class Car(Vehicle):
+    def speed(self):
+        return "Top speed 120 mph"
+
+class Truck(Vehicle):
+    def cargo(self):
+        return "Can carry 5 tons"
+
+# Both Car and Truck get 'info()', but Car doesn't get 'cargo()'
+
+```
+
+### E. Hybrid Inheritance
+Hybrid inheritnce is a combinatin of two or more inheritance listed above.
+eg: A mix of Multiple and Multilevel inheritance.
+
+```py
+class School:
+    def school_name(self): return "High School"
+
+class Faculty(School):  # Hierarchical/Multilevel branch
+    def work(self): return "Teaching"
+
+class Sports:           # Independent base
+    def activity(self): return "Basketball"
+
+class Student(Faculty, Sports): # Multiple Inheritance branch
+    pass
+
+```
+
+## 2. Polymorphism
+   **Same operation but different behavior**.
+   * It allows different classes to have  functions or methods with the same name to work differently depending on the type of object they acting upon.
+   * Python handles this smoothly because of python in dynamically typed.
+```py
+class Duck:
+    def sound(self):
+        return "Quack"
+
+class Dog:
+    def sound(self):
+        return "Woof!"
+
+def make_it_speak(animal_obj):
+    animal_obj.sound()
+
+
+make_it_speak(Dog()) # Woof!
+make_it_speak(Duck()) # Quak!
+
+```
+   
+
+## 3.  Encapsulation
+   * Building of data (attributes) and methods (functions) within a class, restricting to access some components to control interactions.
+   * In Python, we do this using underscores to signal that a variable is "private."
+  ```py
+  class BankAccount:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.__balance = balance  # Double underscore makes it private
+
+    # Getter method to safely look at the balance
+    def get_balance(self):
+        return self.__balance
+
+    # Setter method to safely change the balance with validation
+    def deposit(self, amount):
+        if amount > 0:
+            self.__balance += amount
+
+account = BankAccount("Alice", 1000)
+# print(account.__balance) # ERROR! Python protects this.
+account.deposit(500)
+print(account.get_balance()) # Output: 1500
+
+  ```
+
+## 4.Data Abstraction
+    Abstraction hides the internal implementation details while exposing only the necessary functionality.It focus on "what to do" rather than "how to do".
+
+```py
+from abc import ABC, abstractmethod
+
+class Vehicle(ABC): # Abstract Class
+    @abstractmethod
+    def start_engine(self):
+        pass
+
+class Car(Vehicle):
+    def start_engine(self):
+        return "Car engine started. Vroom!"
+
+# my_vehicle = Vehicle() # ERROR: You cannot create an instance of an abstract class directly.
+my_car = Car()
+print(my_car.start_engine()) # Output: Car engine started. Vroom!
+```
