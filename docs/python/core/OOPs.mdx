@@ -482,3 +482,171 @@ class Car(Vehicle):
 my_car = Car()
 print(my_car.start_engine()) # Output: Car engine started. Vroom!
 ```
+
+## Advanced OOPs Concepts
+
+## 1. The Diamond Problem,MRO and C3 Linearization
+
+### Diamond Problem
+
+The Diamond Problem occurs when a child class inheritance from two parent classes, And both of those parent classes inherit from the same grandparent class.If both parents override a method from the grandparent, and the child calls that method, which parents method does it use?
+
+```py
+[ Grandparent (A) ]  -> has a method: clean_room()
+       /          \
+  [Parent B]    [Parent C] -> both override clean_room()
+       \          /
+       [ Child D ]         -> calls clean_room(). Who wins? B or C?
+```
+### Method Resolution Order(MRO)
+
+* To prevent confusion, every class in Python has an **MRO** a strict , flat list that tells Python exactly which order to search for a method.
+* Python searches from left to right.
+* we can inspect by using `Class.__mro__`
+
+### C3 Linearization (The Math Engine)
+How Python builds that MRO without breaking things? It uses an algorithm called **C3 Linearization**.
+C3 enforces three strict rules.
+
+1. **Preserve Subclass Order** : Children are always checked before parents.
+2. **Preserve Local Precedence** : If you write `class D(B,C):`, `B` must always checked before `C`.
+3. **Monotonicity** : If class B comes before class C in an inheritance chain, it must stay that way across the entire application.
+
+NOTE : If you try to design a messy inheritance tree that breaks these mathematical rules, Python will refuse to compile it and raise a `TypeError: Cannot create a consistent method resolution order (MRO)`. 
+
+## 2. The `super()` Function
+
+* Most People thinks `super()` just calls the parent class.In sigle inheritance it does.
+* But in Multiple Inheritance, `super()` **actually calls the next class in MRO list**, not neccessarily the parent.
+
+```py
+
+class A:
+    def process(self):
+        print("A's process")
+
+class B(A):
+    def process(self):
+        print("Entering B")
+        super().process() # Calls the next thing in the MRO list
+        print("Leaving B")
+
+class C(A):
+    def process(self):
+        print("Entering C")
+        super().process() # Calls the next thing in the MRO list
+        print("Leaving C")
+
+class D(B, C):
+    def process(self):
+        print("Entering D")
+        super().process()
+        print("Leaving D")
+
+# Let's look at D's MRO: D -> B -> C -> A -> object
+d = D()
+d.process()
+
+```
+
+**The Output Sequence**
+Notice how C gets executed even though B is not a parent of C!
+
+
+```
+Entering D
+Entering B
+Entering C
+A's process
+Leaving C
+Leaving B
+Leaving D
+```
+
+## 3. ABC : Abstract Base Class
+
+* The ABC class is strict structural contract.
+* It allows you to define a **template class** that can't be instantiated (writing internal logic or code) on its own, forcing any child classes to implement (writing the instruction) specific methods.
+* If you want to be a subclass of `AppPlugin`, you absolutely must write the your own `run()` method.
+
+```py
+
+from abc import ABC, abstractmethod
+
+class AppPlugin(ABC): # Inheriting from ABC makes it abstract
+    
+    @abstractmethod
+    def run(self):
+        """Every child class must implement this method"""
+        pass
+
+class MyPlugin(AppPlugin):
+    # If we forget to write run(), Python will crash when we create the object
+    def run(self):
+        return "Plugin is executing!"
+
+plugin = MyPlugin() # Works perfectly!
+
+```
+
+## 4.`__init_subclass__`
+* Introduced to make class customisation simpler.
+* `__init_subclass__` is method inside the parent class.
+* It triggers automatically when a new child classs inherits from it .
+* It helps **parent class** to inspect,validate, or register **child classes** the exact millisecond they are defined, before you ever create an instance.
+
+```py
+class Registry:
+    plugins=[]
+    def __init_subclass__(cls,**kwargs):
+        super().__init_subclass__(**kwargs)
+        #Automatically keep list of all subclasses created
+        Registry.plugins.append(cls)
+        print(f"Automatically registered plugin: {cls.__name__}")
+
+class AudioPlugin(Registry):
+    pass
+
+class VideoPlugin(Registry):
+    pass
+
+#Output:
+#Automatically registered plugin: AudioPlugin
+#Automatically registered plugin: VideoPlugin
+
+```
+
+## 5. Metaclasses
+
+* **class** is blueprint of creating an **Object**, then a **Metaclass** is a blueprint for creating a **Class**.
+* In Python, classes themselves are objects. By default, all classes in Python are built by a **master metaclass** called `type`.
+* A custom metaclass lets you intercept and completely rewrite how python constructs a class object at runtime.
+* NOTE : You rarely need custom metaclasses. `__init_subclass__` handles 95% of use cases cleanly. Use metaclasses only if you are building massive libraries or deep frameworks (like Django or Pydantic) where you must fundamentally alter Python class structures.
+* **Metaclass** The blueprint that builds classes, giving you complete control over class modification.
+
+```py
+
+# A metaclass inherits from 'type' instead of 'object'
+class UpperCaseAttributesMeta(type):
+    def __new__(mcs, name, bases, class_dict):
+        # We intercept the class creation and force all attributes to uppercase
+        uppercase_dict = {}
+        for key, value in class_dict.items():
+            if not key.startsWith("__"): # Leave special dunder methods alone
+                uppercase_dict[key.upper()] = value
+            else:
+                uppercase_dict[key] = value
+                
+        # Let 'type' actually construct the class with our modified dictionary
+        return super().__new__(mcs, name, bases, uppercase_dict)
+
+# We link our class to the metaclass using the 'metaclass' keyword
+class User(metaclass=UpperCaseAttributesMeta):
+    role = "admin"
+    status = "active"
+
+u = User()
+# print(u.role)   # CRASH! 'role' doesn't exist anymore.
+print(u.ROLE)     # Output: admin (The metaclass rewrote the attribute name!)
+
+```
