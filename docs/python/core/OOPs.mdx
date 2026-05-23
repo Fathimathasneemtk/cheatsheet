@@ -197,7 +197,246 @@ make_it_speak(Dog()) # Woof!
 make_it_speak(Duck()) # Quak!
 
 ```
-   
+
+In Pyhton Polymophism is flexible ,usually shows up two main inheritance. **With Inheritance** and **Without Inheritance**.
+
+### A. Polymorphism with inheritance
+
+This is a class-object oriented concept.Multiple child class inherits from a parent class, but they **override** a specific method to change its behaviour. 
+
+```py
+class Document:
+    def __init__(self,name):
+        self.name=name
+    
+    def show(self):
+        pass
+
+class WordDocument(Document):
+    def show(self):
+        return f"Opening {self.name} in MIcrosoft Word Document."
+
+class PDFDocument(Document):
+    def show(self):
+        return f"Opening {self.name} as PDF layout."
+
+def open_file(obj):
+    print(obj.show())
+
+open_file(WordDocument("Resume.docx"))
+open_file(PDFDocument("Ebook.pdf"))
+```
+
+### B. Polymorphism without Inheritance
+
+* Python is dynamically typed,Which gives a unique flaovour of inheritance called ** Duck Typing**.The phrase comes from saying :"If it walks like a duck and quacks like duck , its a duck".
+
+* Python doesn't care about the type of the class or Family tree it only care abouts the object has the method it wants to call. 
+```py
+
+class Duck:
+    def __init__(self):
+        self.name
+
+    def sound(self):
+        return f"{self.name} sounds Quack"
+
+class Dog:
+    def __init__(self):
+        self.name=name
+
+    def sound(self):
+        return f"{self.name} sounds Woof"
+
+class CarHorn:
+    def __init__(self):
+        self.name=name
+
+    def sound(self):
+        return f"{self.name} sounds car"
+
+# A function doesn't care about What object it gets,as long as it can make sound
+def make_sound(obj):
+    obj.sound()
+
+make_sound(Duck("maju"))
+mak_sound(Dog("Tilo"))
+make_sound(CarHorn("i20"))
+```
+Here Non_animal also works ,beacuse it can make sound.
+
+* In Many programming language like Java ,if you want a function to accept a parameter , you have to explicitly pass its exact data type or family tree. So in Java was this it wont work for otherthan what type it mentioned in the function.Suppose for this make_sound only accepts object from Animal class , then it wont accept CarHorn class object.
+
+
+### C. Polymophism in Built-in Python Functions
+
+We using polymophism in everyday, without realizing it.
+Built-in functions like `len()` change their behavior depending on what you give them.
+
+```py
+
+# len() counts characters in a string
+print(len("Python"))  # Output: 6
+
+# len() counts items in a list
+print(len([1, 2, 3]))  # Output: 3
+
+# len() counts key-value pairs in a dictionary
+print(len({"a": 1, "b": 2}))  # Output: 2
+
+```
+
+### Method Overloading Vs Method Overriding
+
+#### A. Method Overriding
+Redefining a parent class's method inside a child class.
+
+#### B. Method Overloading
+Having multiple functions in the same class with the exact same name but different input arguments.eg: `abc(x,y,z)` and `abc(x,y)`.
+
+**NOTE**: Python doesn't support native method overloading.If we write 2 functions with the same name , the second one simply overrides the first one.To mimic overloading we use default args (like def `add(x,y,z=9)` or variable arguments  `*args`).
+
+### **NAtive Method Overloading** -**Python Not Supports**
+Python reads code from top to bottom. When it encounters the second function, it simply points the function name to the new definition, completely erasing the first one.
+
+**Why can't Python do this?**
+* Python is a dynamically typed language and functions don't enforce input data types. Furthermore, a Python class is essentially a dictionary under the hood. When you define a method, Python stores it as a key-value pair: {"add": function_object}.
+
+* If you define a second method named add, Python simply updates that dictionary key to point to the new function, completely erasing the old one. Java, on the other hand, keeps a structured list of distinct method signatures.
+
+```py
+class Calculator:
+    # First definition (takes 2 arguments)
+    def add(self, x, y):
+        print("Running the 2-argument version...")
+        return x + y
+
+    # Second definition (takes 3 arguments)
+    # Python looks at this and says: "Oh, 'add' means THIS now!"
+    def add(self, x, y, z):
+        print("Running the 3-argument version...")
+        return x + y + z
+
+calc = Calculator()
+
+# 1. Testing the 3-argument version (Works perfectly)
+print(calc.add(5, 10, 20))
+# Output:
+# Running the 3-argument version...
+# 35
+
+# 2. Testing the 2-argument version (CRASHES!)
+print(calc.add(5, 10))
+
+```
+### Method Overloading in JAVA - supports
+
+In Java, this code works perfectly. Java supports native method overloading because it uniquely identifies a method by its Signature.
+
+A method signature in Java isn't just the name of the function; it is a combination of:
+
+* The method name.
+
+* The number of parameters.
+
+* The data types of those parameters.
+
+```java
+
+class Calculator {
+    // Method 1: Signature is "add(int, int)"
+    public int add(int x, int y) {
+        System.out.println("Running 2-argument version...");
+        return x + y;
+    }
+
+    // Method 2: Signature is "add(int, int, int)"
+    // Java sees this and says: "This is a brand new method!"
+    public int add(int x, int y, int z) {
+        System.out.println("Running 3-argument version...");
+        return x + y + z;
+    }
+
+    public static void main(String[] args) {
+        Calculator calc = new Calculator();
+
+        // Java checks the inputs: 2 integers -> runs Method 1
+        System.out.println(calc.add(5, 10));      
+        // Output: 
+        // Running 2-argument version...
+        // 15
+
+        // Java checks the inputs: 3 integers -> runs Method 2
+        System.out.println(calc.add(5, 10, 20));  
+        // Output: 
+        // Running 3-argument version...
+        // 35
+    }
+}
+
+```
+
+
+
+##### a. Default arg
+
+```py
+class Calculator:
+    # We set z to 0 by default. If the user doesn't provide it, it stays 0.
+    def add(self, x, y, z=0):
+        return x + y + z
+
+calc = Calculator()
+
+# Mimicking 2-argument overloading
+print(calc.add(5, 10))       # Output: 15 (z automatically becomes 0)
+
+# Mimicking 3-argument overloading
+print(calc.add(5, 10, 20))   # Output: 35
+
+```
+##### b. Variable args
+
+```py
+class AdvancedCalculator:
+    # *args will capture every single number passed into a tuple named 'args'
+    def add(self, *args):
+        total = 0
+        for number in args:
+            total += number
+        return total
+
+calc = AdvancedCalculator()
+
+# You can now call the exact same method with 2, 3, or even 5 numbers!
+print(calc.add(5, 10))             # Output: 15
+print(calc.add(5, 10, 20))         # Output: 35
+print(calc.add(1, 2, 3, 4, 5))     # Output: 15
+
+```
+##### c. Overloading Based on Type
+
+Sometimes in other languages, you overload a function not because of the number of inputs, but because of their type (e.g., wanting add(int, int) to behave differently than add(str, str)).
+
+In Python, you can achieve this inside a single function using isinstance() to check the data type:
+```py
+class Greeter:
+    def greet(self, name):
+        # If they pass a list of names
+        if isinstance(name, list):
+            for n in name:
+                print(f"Hello, {n}!")
+        # If they just pass a single string name
+        else:
+            print(f"Hello, {name}!")
+
+welcome = Greeter()
+welcome.greet("Alice")          # Output: Hello, Alice!
+welcome.greet(["Bob", "Charlie"]) # Output: Hello, Bob! \n Hello, Charlie!
+
+```
+
+
 
 ## 3.  Encapsulation
    * Building of data (attributes) and methods (functions) within a class, restricting to access some components to control interactions.
