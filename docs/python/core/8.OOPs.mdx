@@ -203,8 +203,8 @@ In Pyhton Polymophism is flexible ,usually shows up two main inheritance. **With
 ### A. Polymorphism with inheritance
 
 This is a class-object oriented concept.Multiple child class inherits from a parent class, but they **override** a specific method to change its behaviour. 
-
 ```py
+
 class Document:
     def __init__(self,name):
         self.name=name
@@ -235,8 +235,8 @@ open_file(PDFDocument("Ebook.pdf"))
 ```py
 
 class Duck:
-    def __init__(self):
-        self.name
+    def __init__(self,name):
+        self.name=name
 
     def sound(self):
         return f"{self.name} sounds Quack"
@@ -262,6 +262,7 @@ def make_sound(obj):
 make_sound(Duck("maju"))
 mak_sound(Dog("Tilo"))
 make_sound(CarHorn("i20"))
+
 ```
 Here Non_animal also works ,beacuse it can make sound.
 
@@ -300,7 +301,7 @@ Having multiple functions in the same class with the exact same name but differe
 Python reads code from top to bottom. When it encounters the second function, it simply points the function name to the new definition, completely erasing the first one.
 
 **Why can't Python do this?**
-* Python is a dynamically typed language and functions don't enforce input data types. Furthermore, a Python class is essentially a dictionary under the hood. When you define a method, Python stores it as a key-value pair: {"add": function_object}.
+* Python is a dynamically typed language and functions don't enforce input data types. Furthermore, a Python class is essentially a dictionary under the hood. When you define a method, Python stores it as a key-value pair: `{"add": function_object}`.
 
 * If you define a second method named add, Python simply updates that dictionary key to point to the new function, completely erasing the old one. Java, on the other hand, keeps a structured list of distinct method signatures.
 
