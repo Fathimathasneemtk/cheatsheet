@@ -196,6 +196,7 @@ Chaining generators (built by passing one generator into another.) , to process 
    print(next(gen))  # Outputs: 1 (received is None, so it increments by 1)
    print(next(gen))  # Outputs: 2
 
+
    # STEP 3: Use .send() to inject a value!
    # This changes 'received' to 100 inside the function
    print(gen.send(100))  # Outputs: 100 
@@ -221,3 +222,72 @@ Chaining generators (built by passing one generator into another.) , to process 
 
 * Useful for procesing large files like logs, because generator handle it in smaller parts ,**only holds one logs in memory at any given second**, saving memory and we dont wants to load the entire file at once.
 * The iterator can do similar tasks, Generators are quicker bcz of we dont wants define __next__ and __iter__ methods manually. 
+
+## 7- Generator VS Iterators
+
+### A. The Core Difference 
+
+* **Iterator** : A generic concept (a python object) used to loop over the sequence.To make custom iterator , we have to build a class with two methods `__iter__()` and `__next__()`.Also we need to manage the internal state.
+*  **Generaot** : A simple way to create an iterator.Instead of writing the whole class , just write a regular function with `yield` keyword instead of `return` .Python automatically handles `__iter__()` and `__next__()` mechanism for you behind the scenes.
+  
+
+
+### B. Quick Comparison
+
+| Feature | Iterator | Generator |
+|:---|:---|:---|
+|**Implementation**|Class based (requires `__next__()` and `__iter__()`)| Function based (uses keyword `yield`)|
+| **State Management**| Manual (You to tarck variables using `self`)|Automatic (Python saves the local variable state)|
+| **Complexity**| More boilerplate code: Harder| Clean,readable and highly Pythonic|
+|Memory efficeincy| High(Compues values on the fly(only when actually needed))|High(Computes values on the fly(only when actually needed))|
+
+NOTE : **Iterator** is different from **Iterable**
+* **Iterable(The Book)** : The actual data collection(`list`, `tuple` or `set`).It contains all data ,it holds millions of records in the Computer memory, It is not memory efficeint.
+*  **Iterator(The Bookmark)** : This is a separate tiny object whose only job to point to one specific spot in a collection and know how to move to the next one.So Memory efficeint.
+
+### C. Side by Side Code Example
+
+#### a. The iterator way(Class)
+We ahve to track the state (`self.current`) yourself and manually raise `StopIteration` excpetion when done.
+
+```py
+
+class CountUp:
+  def __init__(self,max_num):
+    self.max_num=max_num
+    self.current=1
+
+  def __iter__(self):
+    return self
+
+  def __next__():
+    if self.current <=self.max_num:
+      result=self.current
+      self.current+=1
+      return result
+    else:
+      raise StopIteration
+
+```
+#### b. The Generator way (Function)
+
+Everytime Python hits a `yield` keyword, it pauses the function execution, **saves its state** ,and spit out the value.When called again, it resumes right where it left off.
+
+```py
+
+def count_up(max_num):
+  current=1
+  while current <=max_num:
+    yield current
+    current+=1
+
+```
+
+**-> How use you Both**
+```py
+# They are used exactly the same way!
+for num in count_up(3):
+    print(num)  # Outputs: 1, 2, 3
+
+```
+
