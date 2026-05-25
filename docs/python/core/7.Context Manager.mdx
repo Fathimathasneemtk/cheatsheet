@@ -158,3 +158,101 @@ with MongoDBConnectionManager('localhost',5432) as mongo:
 * mongo inside with block is the client(here mongo) object
 * You can perform database operations
 * `__exit__()` closes the connection automatically.
+
+## Internal Statement of `with`
+
+For an object to work with `with` , it must implement two special methods(often called "dunder" or double-underscore methods):`__enter__` and `__exit__`.This pair is called as **Context Manager Protocol**.
+
+```py
+# What you write
+
+with open("data.txt","w") as f:
+    f.write("Hello !")
+
+#Roughly what python executes internally:
+manager=open("data.txt","w")
+f=manager.__enter__()
+try:
+    f.write("hello")
+finally:
+    manager.__exit__(None,None,None)
+
+```
+
+Life cycle of context manager:
+1. **Evaluation**: Python evaluates the expression next to `with` to get the context manager object.
+2. **Setup(`__enter__()`)**:The manager's `__enter__()` method is called. Whatever this method returns is assigned to the variable after the `as` keyword(if present).NOTE : The manager doesn't have to return itself; it can return anything.
+3. **Execution**: The code block inside the `with` statement runs.
+4. **Cleanup(__exit__())**: When control leaves the block (Whether smoothly or due to an error), the `__exit__` method is triggered.
+
+#### Handling Exception in `__exit__`
+The exit method takes 3 arguments `exc_type`,`exc_value` and `exc_tb`.
+* If the block ran with no errors , all the three parameters as `None`.
+* If an error occured , Python passes the exception's class , the exception instance, and the traceback.
+
+**The Return Value Rule** : if `__exit__` returns `True`, it **swallows the exception**(exception catched but swallows), and excecution continues normally after the `with` block.If returns `False` or `None`, Python lets the **exception propagate upward** to be handled elsewhere.
+
+* Think of `__exit__` as having two distinct responsibilities:
+  **a. The Cleanup Phase** : This is where we actually close the file,release lock,or disconnect from db.This happens no matter what.This happens in the body of the `__exit__()` before return.
+  **b. The return Value**: This is where you decide what to do if an error happened during execution.
+
+### Building a custom manager class
+
+```py
+    class DatabaseConnection:
+        def __init__(self, db_name):
+            self.db_name = db_name
+
+        def __enter__(self):
+            print(Connecting to {self.db_name}...")
+            return self  # This is what the 'as' variable receives
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            print("Closing the database connection safely.")
+            if exc_type is not None:
+                print(f" An error occurred: {exc_val}")
+            # Returning None (or False) means: if there was an error, re-raise it
+            return False 
+
+    # Using our class
+    with DatabaseConnection("UserDB") as db:
+        print("Writing user data...")
+        # Uncommenting the next line will trigger the exception handling in __exit__
+        # raise ValueError("Database timeout!") 
+        print("Data saved.")
+
+````
+
+## Simplifying with `contextlib.contextmanager`
+
+* Writing an entire class with `__enter__` and `__exit__` methods can feel boilerplate-heavy for simple tasks.Python provides a shortcut decorator in the standard library called `@contextlib.contextmanager`.
+* This decorator turns a plain **generator function** into a fully functioning context manager.
+* Instead of splitting your logic into 2 methods, write it allin one place using `try...finally` block and a `yield` statement.
+
+```py
+from contextlib import contextmanager
+
+@contextmanager
+def database_connection(db_name):
+    #Everyting before 'yield' is the __enter__ phase ---
+    print(f"Connecting to {db_name}")
+    try:
+        yield f"Connection object for {db_name}" # This is what 'as' variable gets (returns of the __enter__ phase)
+    # Everything after 'yield' (or in finally) is the __exit__ phase ---
+    except Exception as e:
+        print(f"An error occured")
+        raise # Make sure to reraise if we dont want to swallow the error (Forces __exit__() to return False or None--The excption propagates and crahses (may be in outer 'try--except'))
+        # if there is no "raise" then forces __exit__() to return True- swallows exception
+    finally:
+        print("Closing the db connection safely")
+
+with database_connection("AnalyticsDb")as db:
+    print(f"Running queries on :{db}")
+
+```
+
+#### How the Generator Transition works
+1. When the `with` block starts , the function runs up until hit `yield`
+2. The function pauses at `yield`, and the yielded value is passed to your `as` variable.
+3. Your body code inside `with` block runs.
+4. Once your code finishes (or raises an error),control is handled back to the generator where it left off, forcing the `except` or `finally` or both blocks to execute.
