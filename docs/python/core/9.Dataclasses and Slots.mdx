@@ -1,0 +1,382 @@
+Python provides two powerful, distinct tools for different problems with standard classes: **Dataclasses**(for writing cleaner code) and **Slots**(For making code faster and use less memory).
+
+## 1.Dataclasses : Code Convenience
+
+* Introduced in Python 3.7, the `@dataclass` decorator automatically generates special methods for your classes depends on type hints.It saves you from writing repetitive code.
+
+**Without Dataclass**
+```py
+
+class Point:
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return f"Point(x={self.x}, y={self.y})"
+
+```
+**With Dataclass**
+
+```py
+from dataclasses import dataclass
+
+class Point:
+    x:int
+    y:int
+
+p=Point(1,2)
+print(p)
+
+```
+**Key Benefits of Dataclasses**
+
+* **Automatic Methods:** Generates `__init__`,`__repr__`,`__eq__`(comparison), and more out of the box
+* **Immutability** : We can make the date readonly by setting `@dataclass(frozen=True)`.
+* **Default Values** : You can easily assign default values directly to fields.
+
+## 2. Slots: Memory & Speed Optimization
+* By default, every time you create an object in python, python creates a hidden dictionary('`__dict__'`) for that object.Python stores the instance attribute in a dynamic dictionary(`__dict__`).Becuse dictionaries are dynamic(You can add new variables whenever we want),they require a lot of extra memory overhead just in case you add more data later.
+* **Prerequisites**
+    * *? Dictionary lookup or list lookup which is faster?*
+    * Searching for a specific item (**Winner: Dictionary**)
+        * List search - O(n)- A list has to check single item one by one, strating from the beginning until it finds a match.
+        * Dictionary search - O(1) - A dictionary uses a hash table.It takes the key ,calculates exactly where it should be in memory, and jumps straight to it in **one step**,whether the dictionary has 10 items or million items.
+    * Accessing an item by its exact position(index)(**Winner:list**)
+      * **List Indexing(`my_list[0]`)**: A list is a raw,contigous array in memory.If you ask for an index 0 or 100, python does a microscopic piece of math to find exact memory offset and grabs it instantly.This is zero overhead
+      * **Dictionary Indexing(`my_dict['key']`)**: Eventhough the dictionary lookup is fast(O(1)),it still has to run the key string through a hash function to figure out where it lives.The hashing step makes it tiny slower than a direct list index jump.
+* If we creating millions object the dictionary overhead adds up fast.`__slots__` tells python not to use bulky dynamic dictionary, but instead allocate a **fixed-size array** for a specific set of attributes.
+
+```py 
+class SlottedPoint:
+    __slots__ = ['x', 'y']  # Explicitly define allowed attributes
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+```
+
+**Key Benefits of Slots**
+* **Massive memory savings**: Drop the dictionary overhead entirely.
+* **Faster Attribute Access** : Reading and writing attribute is slightly quicker.when you type `obj.x`, python doesn't search a dictionary.it knows eaxctly where x lives in memory(eg:"the first slot in the array") and jumps straights to it.Since maps attributes to a fixed **list-like array** under the hood.It maps `x` to `0` and `y` to `1`.
+* **Safety** : Prevents typos.If you accidently try to assign `p.z=3`, python will raise an `AttributeError`.
+
+
+**Difference between std attribute and slotted attribute**
+* Reading a standard attribute might take ~45 nanoseconds.
+* Reading a slotted attribute might take ~35 nanoseconds.
+
+
+## 3. Dataclasses VS Slots:
+
+|**Feature**|**Dataclasses(`@dataclass`)**|**Slots(`__slots__`)**|
+|:---|:---|:---|
+|**Primary goal**|Redunce boilerplate\Write cleaner code| Optimise memory and performance|
+|**Attribute storage**|Standard `__dict__` (by default)|Fixed array/flat structure|
+|**Dynamic Attributes**| Allowed| Forbidden (unless `__dict__` in slots)|
+|**Human readability**| High (uses clean type hints)|Meduim (requires a manual list of strings)|
+
+
+## 4. Combining slots and Dataclasses
+
+* If using **python 3.10 or newer**, we can pass `slots=True` into dataclass decorator.
+
+```py
+from dataclasses import dataclass
+
+@dataclass(slots=True)
+class OptimisedPoint:
+    x:int
+    y:int
+
+# You get clean code, automatic __repr__, AND low memory usage!
+
+```
+
+* For older versions (**3.7 to 3.9**)
+
+```py
+from dataclasses import dataclass
+
+@dataclass
+class OlderOptimisedPoint:
+    __slots__=['x','y']
+    x:int
+    y:int
+
+```
+
+
+## 5. When should use which?
+* Use **Dataclasses** as the default choice for any class that primarily stores state/data.It makes your data highly maintainable and readable.
+* Use (**slots=True** in dataclass ) only when you instantiating thousands of small objects and profiling shows that RAM usage is becoming an issue.
+
+## 6. Feature Breakdown
+1. ### `field()`**(The Customizer)**
+  * Used inside dataclasses to customize how specific attributes behave.
+  * It lets you set mutable default **Independent** values(via `default_factory`) like list and dict,hide from the `__repr__`, or exclude them from object comparisons.
+
+```py
+from dataclasses import dataclass,field
+
+@dataclass
+class Inventory:
+    # Use default_factory for mutable types like lists or dicts
+    items:list[str]= field(default_factory=list)
+    # Hide sensitive data from printing out in repr
+    password_hash:str=field(default="***",repr=False)
+
+
+```
+
+* #### Why do we need default_factory=list?**
+      * In python list are mutable, we can change the list after it created.
+      *  If Python allowed you to write items: list[str] = [] inside a dataclass, 
+        ::::danger
+        **every single instance of that class would share the exact same list in computer memory**
+        ::::
+        ```py
+        # IF PYTHON ALLOWED THIS (Bad Code):
+        @dataclass
+        class Cart:
+            items: list[str] = []  # Sharing the same list!
+
+        cart1 = Cart()
+        cart2 = Cart()
+
+        cart1.items.append("Laptop")
+
+        print(cart2.items)  # Output would be: ["Laptop"] !!!
+        ```
+    * How `default_factory` fixes this:
+       * By using default_factory=list, you are giving Python a instructions (a "factory") to manufacture **a completely fresh, independent list** every single time you create a new object.
+        ```py
+        # THE CORRECT WAY:
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class Cart:
+            items: list[str] = field(default_factory=list)
+
+        cart1 = Cart()
+        cart2 = Cart()
+
+        cart1.items.append("Laptop")
+
+        print(cart1.items)  # Output: ["Laptop"]
+        print(cart2.items)  # Output: [] (Stays clean and empty!)
+        ```
+
+  * #### Comparison
+    * By default, when you compare two dataclass objects using ==, Python automatically looks at every single field inside them. If even one field is different, Python says they are not equal (False).
+    * However, sometimes you have a field that is unique, temporary, or changing, but you still consider the core objects to be identical. This is when you use compare=False.
+    * **The Scenario: A User Account**
+      * Imagine you are building a website, and you have a User dataclass. It tracks a user's username, email, and how many times they have logged in (login_count).
+      ```py
+      from dataclasses import dataclass, field
+
+        @dataclass
+        class User:
+            username: str
+            email: str
+            login_count: int = field(default=0, compare=False) # <-- Excluded from comparison!
+
+        ```
+    * **Why we set** compare=False
+        ```py
+        # Alice logs in on her phone (login_count is 5)
+        user_phone = User(username="alice123", email="alice@email.com", login_count=5)
+
+        # Alice logs in on her laptop later (login_count is now 6)
+        user_laptop = User(username="alice123", email="alice@email.com", login_count=6)
+        print(user_phone == user_laptop)  
+        # Output: True
+
+        ```
+
+2. ### `frozen=True` **(The Immutable Flag)**
+   * An optional argument passed to `@dataclass`.
+   * It makes the **instance immutable** after the creation.
+   * Attempting to assign a new value to an attribute throws a `FrozenInstanceError`.
+   * It also makes the object hashable, meaning you can use the instance as dict key or store it in a set.
+
+```py
+
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class ImmutablePoint:
+    x:
+
+```
+
+* Using Dataclass as a Dictionary Key.
+```py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)  # Must be frozen!
+class Employee:
+    name: str
+    department: str
+
+# 1. Create our employee objects
+emp1 = Employee("Alice", "Engineering")
+emp2 = Employee("Bob", "Marketing")
+
+# 2. Use the entire object as a KEY in a dictionary
+salary_registry = {
+    emp1: 120000,
+    emp2: 95000
+}
+
+# 3. Look up the value using an object
+print(salary_registry[emp1])  # Output: 120000
+
+```
+3. ### `__post_init__` **(The Validator/Calculator)**
+   * Because `@dataclass` generates its own `__init__` method, you cannot easily write custom initialization logic inside it.
+   * Python provides `__post__init__` to run code immediately after the autogenerated `__init__` finishes.
+   * **Dervied attribute** - a piece of data that you dont type manually while creating object, instead it creates automatically from other information that is already inside the object.
+  
+```py
+from dataclasses import dataclass,field
+
+class Rectangle:
+    width:float
+    height:float
+    area:float=field(init=False)
+
+    def __post_init__(self):
+        if self.width <=0 or self.height <=0:
+            raise ValueError("Dimensions should be positive")
+        self.area=self.width* self.height
+
+```
+   
+4. ### `namedtuple`**(The Lightweight Tuple)**
+   * Found in the `collection` module or `typing.NamedTuple` module.
+   * This creates a subclass of a tuple.
+   * namedtuple can be accessed via dot notation(`point.x`) or with the traditional numerical indexing (`point[0]`).
+   * Like tuple , it is immutable, memory effeceint and iterable.
+  
+  ```py 
+  from collections import namedtuple
+  
+  Point2D=namedtuple('Point2D',['x','y'])
+
+  p=Point2D(10,20)
+  print(p.x,p[0])
+
+  ```
+
+#### Comparison between tuple and namedtuple
+
+|Feature|Standard(`tuple`)|`namedtuple`|
+|:---|:---|:---|
+|**How to create**|`my_tuple=(10,11)`|Requiring importing `namedtuple` and defining fields first and then create instance|
+|**Data Lookup**|By index only(`t[0]`)|By index or property name (`t.width`)|
+|**Code Readability**|**Low**:Someone reading `item[3]` has no idea what that represents.|**High**:Someone reading `item.price` knows exactly what it is.|
+|**Print Output(`__repr__`)**|Vague: `(10,11)`|Clear : `Coordinate(latitude=40.7128, longitude=-74.006)`|
+|**Memory & Performance**|Extremely fast and lightweight|**Exactly the same as a tuple.No extra memory overhead!|
+|**Mutability**|**Immutable**|**Immutable**|
+
+```py
+Point2D = namedtuple('Point2D', ['x', 'y'])
+#  ▲                     ▲
+#  │                     └─ 1. The Class Name (inside the string)
+#  └─────────────────────── 2. The Variable Name (the handle you type)
+
+```
+
+* what happens if classname and variable name are different
+```py
+# Variable name is 'Banana', but Class name is 'Apple'
+Banana = namedtuple('Apple', ['x', 'y'])
+
+# You must use the variable name to create it:
+p = Banana(5, 10)
+
+# But look at what Python prints out!
+print(p)  
+# Output: Apple(x=5, y=10)
+
+```
+
+::::Danger
+The Crash
+::::
+
+```py
+Banana = namedtuple('Apple', ['x', 'y'])
+
+p = Apple(5, 10)  # ❌ CRASHES HERE!
+
+```
+**? Why it Crashes**
+Python reads code from left to right. It only knows about the names on the left side of the = sign. Because you never created a variable named Apple on the left side, Python will look at p = Apple(5, 10) and say:
+
+`NameError: name 'Apple'` is not defined
+
+5. ### `TypedDict` **(The Typed Dictionary)**
+
+* **The Two Phases of Python Code**
+  `
+  [ Phase 1: Writing Code ]  ───>  [ Phase 2: Running Code ]
+  (Static Analysis / IDE)          (Runtime / Python Interpreter)
+  `
+  * Phase-1 :Static Analysis
+    While you typing in code editor , a background program called a **type checker** (like Mypy) reads the code line by line just as raw text.It checks the bugs statically(while the code at rest).Here where `TypedDict` type hints.
+  * Phase-2 : Runtime
+    when you click the "Run" button, the python intrepreter takes over and executes it.At this phase python ignores `TypedDict`type hints.
+
+* The `TypedDict` is a static analysis tool from `typing` module.
+* It doesn't change python runtime behavior.
+* At runtime it is a normal python dict (`{}`).
+* However it allows the type checkers(like `Mypy` or `IDE`) to ensure that a dictionary contains specific keys pointing to specific datatype.
+
+```py
+from typing import TypedDict
+
+class Movie(TypedDict):
+    title: str
+    year: int
+
+# This is a plain dictionary at runtime, but type-checked statically
+my_movie: Movie = {"title": "Inception", "year": 2010}
+
+```
+
+* **How it works**
+```py
+  from typing import TypedDict
+
+# 1. Define the structural shape using TypedDict
+class Movie(TypedDict):
+    title: str
+    year: int
+
+# 2. Try to use it, but make a deliberate typo ('yar' instead of 'year')
+my_movie: Movie = {"title": "Inception", "yar": 2010}
+
+```
+
+**What a Static Analysis Tool does:**
+* While you are still in your editor, your IDE will immediately draw a red squiggly line under "yar".
+
+* If you hover your mouse over it, the static analysis tool will tell you:
+
+* Expected typed dictionary item "year" but found "yar"
+
+* It caught your mistake before you even clicked run!
+
+**What happens at Runtime:**
+* If you ignore the red warning line and force Python to run the script anyway, Python will not crash. It will run successfully and print out the dictionary with the typo.
+
+* This is because TypedDict provides no guardrails or validation at runtime; it acts purely as a blueprint for your static code analysis tools to double-check your spelling and data types while you write.
+
+
+
+
+
+
+
