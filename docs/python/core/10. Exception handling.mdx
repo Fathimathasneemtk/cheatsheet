@@ -1,0 +1,1002 @@
+*   **Exception handling** allows a program to handle unexpected errors during **execution** in a controlled way,instead of crashing it abruptly.
+* eg: Handles runtime errors such as invalid input, file not found, type mismatches,division by zero that occur during runtime.(run and execution are same meaning in many languages)
+* Compile time errors found by compiler/interpreter before program starts running eg : (Syntax,Missing parenthesis).So **Exception handling** deals with only **runtime** erros.
+
+```py
+try:
+    #code
+except:
+    #code
+else:
+    #code
+finally:
+    #code
+
+```
+
+* **try** : Runs the risky code that might cause an error.
+* **except** : Catches and handles errors.
+* **else** : excecute only if no exception occurs in try.
+* **finally** : Runs regardless of what happens useful for cleanup tasks like closing files.
+
+example
+
+```py
+
+try:
+    n=0
+    res=100/n
+except ZeroDivisionError:
+    print("You can't divide by 0")
+else:
+    print("result",res)
+finally:
+    print("Excecution completes")
+
+```
+
+## Common Exception Error
+
+* **ZeroDivisionError**: Raised when dividing a number by zero.
+* **ValueError**: Raised when a function receives an invalid value.
+* **TypeError:** Raised when an operation is performed on incompatible data types.
+* **FileNotFoundError**: Raised when a file does not exist.
+* **ImportError**: Raised when Python cannot import a module.
+
+## Catching Exception
+We can handle errors more efficeintly by specifying the types of exceptions we expect.This will make code more safe and debug easily
+### 1. Specific Exceptions
+```py
+try:
+    # This will cause ValueError
+    x = int("str") 
+    inv = 1 / x   # Inverse calculation
+    
+except ValueError:
+    print("Not Valid!")
+    
+except ZeroDivisionError:
+    print("Zero has no inverse!")
+
+```
+- "str" can't converted into int. But "2" can convert into int.
+
+### 2. Multiple Exceptions
+We can catch multiple exceptions in single block if we needs to handle them same way or we can separate them if different types of exceptions needs different handling.
+
+```py
+a=["10","twenty",30]
+try:
+    total=int(a[0]) + int(a[1])  
+except (ValueError,TypeError) as e:
+    print("Error",e)
+except IndexError:
+    print("index out of range")
+
+```
+
+### 3. Catch-All Handler and Their Risks
+
+Catch-all handler is used to catch any exception.Use only **except** keyword to define it.
+```py
+try:
+    # Risky operation: dividing string by number
+    res = "100" / 20 
+    
+except ArithmeticError:
+    print("Arithmetic problem.")
+    
+except:
+    print("Something went wrong!")
+```
+Here type error happened, so catches at except .
+
+## Raise Exception
+We rasie exception using `raise` keyword followed by instance of the exception class that we wants to trigger.
+
+syntax
+`
+rasie ExceptionType("Error message")
+`
+
+example
+```py
+def set(age):
+    if age < 0:
+        raise ValueError("Age cannot be negative.")
+    print(f"Age set to {age}")
+
+try:
+    set(-5)
+except ValueError as e:
+    print(e)
+
+```
+
+## Errors and Exceptions and Bugs
+Error and Exceptions are both issues in the program, but they differ in severity and handling.
+
+* **Errors** : Issues in the program that occurs at compile time eg:SyntaxError,IndentationError or during execution.
+* **Exception** : Problems that occur at runtime and can be managed using exception handling.eg : Invalid input, missing files.
+* **Bugs** : A mistake in the code ,design or logic made by programmer.
+
+## Nested Try-Except Blocks
+
+Python allows one try-except block to be placed inside another try-except block.
+
+```py
+def divide_and_access(a, b):
+    try:
+        result = a // b
+        print("Result:", result)
+
+        try:
+            nums = [1, 2, 3]
+            print(nums[5])
+
+        except IndexError:
+            print("Invalid index access")
+
+    except ZeroDivisionError:
+        print("Cannot divide by zero")
+
+    finally:
+        print("Execution completed")
+
+divide_and_access(6, 2)
+print("---")
+divide_and_access(6, 0)
+
+```
+**Output**
+`
+Result: 3
+Invalid index access
+Execution completed
+---
+Cannot divide by zero
+Execution completed
+`
+
+Explanation
+* The inner try-except block handles the IndexError caused by accessing an invalid list index.
+* The outer try-except block handles the ZeroDivisionError when dividing by zero.
+* The finally block runs in both cases.
+
+## Python Built-in Exceptions
+
+Python provides a set of built-in exceptions, each designed to a specific type of error and helps to debug more effectively.
+
+
+### 1.BaseException
+
+This class is the root of python's exception hierarchy.All other exceptions directly or indirectly inherited from it.But this is rarely used in the code, it is important because it is the foundations of Python's error-handling system.
+
+### 2.Exception
+
+**Exception class** is the base for all the non-exist exceptions.You will often catch Exception in general error-handling when you are not target to specific exception.
+
+```py
+try:
+    raise Exception("This is a generic exception")
+except Exception as e:
+    print(e)
+
+```
+Explanation: We manually raise an Exception with a message. The error is caught and message is displayed instead of halting the program.
+
+### 3.ArithmeticError
+
+* **ArithmeticError** class is the base for all errors related to mathematical operations.
+* You don't raise it directly, but provides a way to catch all math-related errors in one block.
+```py
+try:
+    raise ArithmeticError("Arithmetic error occured")
+except ArithmeticError as e:
+    print(e)
+
+```
+Explanation: We raise an ArithmeticError with a custom message. The program catches it and prints the error message, preventing a crash.
+
+### 4.ZeroDivisionError
+It occurs when you try to divide a number by zero.
+
+```py
+try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print(e)
+
+```
+Explanation: operation 10/0 is invalid. Python raises a ZeroDivisionError, which is then caught in the except block. Instead of crashing, program prints the error message.
+
+### 5.OverflowError
+**OverflowError** occurs when the **result of numerical operations is too large** for Python to represent.While it handles large integers well,certain floating point operations (like very large exponentials) can still cause error.
+
+```py
+import math
+try:
+    result = math.exp(1000)  # Exponential function with a large argument
+except OverflowError as e:
+    print(e)
+
+```
+Explanation: exponential function with input 1000 produces a number too large to handle. Python raises an OverflowError, which is caught and displayed as an error message.
+
+### 6.FloatingPointError
+
+Main FloatingPoint conditions are 
+| Condition             | Meaning                                  | Example                                   |
+| --------------------- | ---------------------------------------- | ----------------------------------------- |
+| **Divide by zero**    | Finite number divided by 0               | `1.0 / 0.0`                               |
+| **Overflow**          | Result too large to represent            | `1e308 * 1e308`                           |
+| **Underflow**         | Result too small to represent accurately | `1e-308 * 1e-308`                         |
+| **Invalid operation** | No meaningful numeric result             | `0.0 / 0.0`, `sqrt(-1)` (real arithmetic) |
+
+* `FloatingPointErrors` occurs when a floating-point operation("floating-point calculation" ≈ "operation on floating-point numbers") encounters a numerical condition such as divide-by-zero, overflow,underflow or invalid arithmetic.
+* By default Python handles all floating-point issues silently(Dividing by zero results in inf or nan).
+* However we can enable the error explicitly using the libraries like NumPY.
+Example: This example reports error in NumPY and performs a division by zero to trigger FloatingPointError.
+
+```py
+import numpy as np
+np.seterr(all='raise')
+try:
+    np.divide(1.0,0) 
+
+```
+output
+FloatingPointError caught: divide by zero encountered in divide
+
+Explanation: Normally, NumPy would return inf for 1/0. But since we enabled error raising, the division explicitly throws a FloatingPointError, which we catch and print.
+
+::::info
+* `np.divide(1/0)` here the inputs are integers, but the NumPy processes the operation using floating-point-aware numerical machinery and detects a floating-point exceptioon condition.The FloatingPointError occurs normally on floating point values.
+* Without `np.seterr(all=raise)`,NumPY usually return `inf` or `nan` ,emits warning and continues execution. `RuntimeWarning: divide by zero encountered in divide`.
+* With `np.seterr(all=raise)` now NumPY converts floating-point condition into exception.`FloatingPointError: divide by zero encountered in divide`
+::::
+
+### 7.AssertionError
+* AssertionError is raised when aseertion statment fails.
+* The assert keyword is often used for debugging or testing assumptions in code.
+Example: This example checks if 1===2 using assert.Since condition is false , it raises an AssertionError
+
+```py
+try:
+    assert 1==2 , "Assertion failed"
+except AssertionError as e:
+    print(e)
+
+
+```
+output
+Assertion failed
+
+Explanation: assert statement expects 1 == 2 to be true, but it isn’t. Therefore, Python raises an AssertionError with the message "Assertion failed".
+
+### 8.AttributeError
+ 
+AttributeError happens when try to access an attribute that doesn't exist for an object.
+ 
+Example: This example tries to access a non-existent attribute in a class instance.
+ 
+```py
+class MyClass:
+    pass
+ 
+obj=Myclass()
+try:
+    obj.some_attribute
+except AttributeError as e:
+    print(e)
+ 
+```
+output
+'MyClass' object has no attribute 'some_attribute'
+ 
+Explanation: object obj is created from MyClass, which has no attributes. Attempting to access some_attribute raises an AttributeError.
+ 
+### 9.IndexError
+ 
+IndexError happens when tries to access a list element(sequence) with an index of out of range.
+Example: This example tries to access the 6th element of a list that only has 3 elements.
+ 
+```py
+my_list=[1,2,3]
+try:
+    my_list[5]
+except IndexError as e:
+    print(e)
+```
+output
+list index out of range
+ 
+Explanation: list has only indices 0, 1, 2. When we try to access index 5, Python raises an IndexError.
+ 
+### 10.KeyError
+ 
+KeyError happens when you tries access a key that is doesn't exist.
+ 
+Example: This example tries to access the key "key2" in a dictionary that only has "key1".
+ 
+```py
+d = {"key1": "value1"}
+ 
+try:
+    val = d["key2"]
+except KeyError as e:
+    print(e)
+ 
+```
+ 
+### 11.MemoryError
+ 
+MemoryError happens when python **cannot allocate enough memory** for **an opertaion**.
+This usually happens when tries to create extremely large data structures.
+ 
+```py
+try:
+    li = [1] * (10**10)
+except MemoryError as e:
+    print(e)
+ 
+ 
+```
+Explanation: Attempting to create a list with 10**10 elements requires more memory than available. Python raises a MemoryError.
+ 
+### 12.NameError
+ 
+NameError occurs when you use a variable of functio name that **doesnot defined**.
+ 
+```py
+try:
+    print(var)
+except NameError as e:
+    print(e)
+ 
+```
+output
+name 'var' is not defined.
+ 
+### 13.OSError
+ 
+Raised when **system related opertion**(like file i/o,opening files,interacting with os) fails.
+* **IOError** is just an alias for OSError(They are the same)
+* **FIleNotFoundError** is a subclass of OSError, specificallly raised when a file or directory doesn't exist.
+ 
+Example: This example attempts to open a missing file, which triggers FileNotFoundError (a subclass of OSError).
+ 
+```py
+try:
+    open("non_existent_file.txt")  # File does not exist
+except FileNotFoundError as e:     # More specific
+    print("FileNotFoundError caught:", e)
+except OSError as e:               # General OS-related error
+    print("OSError caught:", e)
+ 
+```
+output
+ 
+`FileNotFoundError caught: [Errno 2] No such file or directory: 'non_existent_file.txt'`
+ 
+Explanation: missing file raises FileNotFoundError, which is a subclass of OSError. Since we catch it specifically, the error is displayed clearly.
+ 
+## More Built-in Exceptions
+ 
+|Exception Name| Description|
+|:---|:---|
+|TypeError|Raised when an operation or function applied to object of inappropriate type(eg:"fathima"+4 )|
+|ValueError| Raised when a function receives an argument of correct type but with an invalid value(eg : int("fathima") it should be int("5") )|
+|ImportError|Raised when there is a problem with an import statement|
+|ModuleNotFoundError| Raised when a module cann't found|
+|StopIteration| Raised when next() function is called , but the iterator has no more items.|
+|KeyboardInterrupt|Raised when the user interrupts the program's execution(eg:pressing Ctrl+C)|
+|SystemExit|Raised when sys.exit() is called to terminate the program|
+|NotImplementedError|Raised when a method that should be implemented a subclass but not implemented.|
+|RuntimeError|that is raised when something goes wrong during program execution, but the error doesn't fit a more specific exception type, so when the error doesn't fall under other categories and fails at execution time|
+|RecursionError|Raised when maximum recursion depth is exceeded.|
+|SyntaxError|Raised when there is a mistake in the python syntax|
+|IndentationError|Raised when the indentation is not in Python code|
+|TabError|Raised when there is an inconsistent use of tabs and spaces in indentation.|
+|UnicodeError|Raised when Encoding or Decoding Unicode text fails.|
+
+## User Defined Exceptions
+
+* User-defined exceptions are created by defining new class that inherits from Python builtin Exception class or any of its subclass.
+* Steps to create and use Userdefined exception class
+    * Define a new Exception class - Create a new class that inherits from Exception class or any of its subclass.
+    * Raise the Exception - Use the raise statement to raise the user defined exception when a specific condition occurs,
+    * Handle Excption - Use the try-except blocks to handle the user defined exception.
+  
+example
+```py
+#step-1 - Define a custom exception class
+class InvalidAgeError(Exception):
+    def __init__(self,age,message="Age must be between 0 and 120"):
+        self.age=age
+        self.message=message
+        super().__init__(self.message)
+    
+    def __str__(self):
+        return f"{self.age} -> {self.msg}"
+
+#step-2 - Use the custome excption in your code
+def set_age(age):
+    if age<0 or age age >120:
+        raise InvalidAgError(age)
+    else:
+        print(f"Age set to {age}")
+#step-3 - handling the custom exception
+try:
+    set_age(150)
+except InvalidAgeError as e:
+    print(e)
+
+```
+output
+`150 -> Age must be between 0 and 120`
+
+**Explanation**
+* InvalidAgeError class inherits from Exception. It defines an __init__ method to accept age and message.
+* The __str__ method returns a readable string representation of the error.
+* In set_age(), if the age is outside the valid range (0–120), the exception is raised.
+* The try-except block catches the exception and prints the error message.
+
+
+## Customizing Exception class
+* When we create a custom exception, we can use sublcass of python's builtin Exception class (or a std subclass like TypeError or ValueError).
+* We can add our own attributes and methods or custom logic to make our exception more informative.
+  
+Example : We improve the InvalidAgeError by adding error code and customizing the error message.
+
+```py
+class InvalidAgeError(Exception):
+    def __init__(self, age, msg="Age must be between 0 and 120", error_code=1001):
+        self.age = age
+        self.msg = msg
+        self.error_code = error_code
+        super().__init__(self.msg)
+
+    def __str__(self):
+        return f"[Error Code {self.error_code}] {self.age} -> {self.msg}"
+        
+def set_age(age):
+    if age < 0 or age > 120:
+        raise InvalidAgeError(age)
+    else:
+        print(f"Age set to: {age}")        
+        
+try:
+    set_age(150)  # This will raise the custom exception
+except InvalidAgeError as e:
+    print(e)
+```
+output
+`[Error Code 1001] 150 -> Age must be between 0 and 120`
+
+Explanation:
+
+InvalidAgeError now has an additional attribute error_code.
+__str__ method is overridden to display both the error code and the age.
+When set_age(150) is executed, the exception is raised and caught in the try-except block.
+The customized error message is printed, making the error more descriptive.
+
+## Using Standard Exception as a Base Class
+Sometimes instead of directly inherting from **Exception**, we can create a custom exception by subcalssing a standard exception such as Runtime or ValueError etc.
+Example: This example shows how to create a custom exception NetworkError by inheriting from RuntimeError, which is a standard bult-in exception.
+
+```py
+#NetworkError has base RuntimeError and not Exception.
+class NetworkError(RuntimeError):
+    def __init__(self,arg):
+        self.args=(arg,) #store as tuple
+
+try:
+    raise NetworkError("Connection failed")
+except NetworkError as e:
+    print(e.agrs)
+
+````
+
+output
+`('Connection failed',)`
+
+Explanation
+* NetworkError inherits from RuntimeError, which is builtin exception type.
+* When raised the message is stored in the args attribute
+* The exception is caught and its stored arguments are displayed.
+
+## Real-World Example: InvalidEmail Error 
+Here is simple example where we raised a custom exception if the email address is not valid.
+
+```py
+
+class InvalidEmailError(Exception):
+    def __init__(self,email,msg="Invalid email format"):
+        self.email=email
+        self.msg=msg
+        super().__init__(self.msg)
+
+    def __str__(self):
+        return f"{self.email} -> {self.msg}"
+
+def set_email(email):
+    if "@" not in email:
+        raise invalidEmailError(email)
+    print(f"Email set to :{email}")
+
+try:
+    set_email("userexample.com")
+except InvalidEmailError as e:
+    print(e)
+
+
+```
+output
+`userexample.com -> Invalid email format`
+
+Explanation:
+
+* A new exception class InvalidEmailError is defined to validate email addresses.
+* If the given email does not contain "@", the exception is raised.
+* The try-except block catches the error and prints the formatted message.
+
+## When to use User-Defined Exceptions?
+* Representing specific error in an application(eg: InvalidAgeError,DatabaseConnectionError)
+* Providing clearer and more descriptive errro messages
+* Handling a group of related errors separately using except.
+
+By uising user- defined exception , program will be more readable,maintainable and easier to debug.
+
+## Custom exception heirarchy 
+
+```py
+class AppError(Exception):
+    pass
+
+class APIError(AppError):
+    pass
+
+class AuthError(AppError):
+    pass
+
+class PermissionError(AuthError):
+    pass
+
+try:
+    raise PermissionError("Access denied")
+
+except APIError:
+    print("Handled API error")
+
+```
+
+## Inside in Exception
+
+```py
+class Exception:
+    def __init__(self,*args):
+        self.args=args
+
+    def __str__(self):
+        if len(self.args)==1:
+            return str(self.args[0])
+        return str(self.args)
+
+```
+
+* When an exception object is created `error=Exception("Invalid input")`, python collects all args into tuple as `error.args #("invalid input,")`
+* The __str__ method behaves as follows:
+```py
+print(Exception("Invalid input"))
+# Invalid input
+
+print(Exception("Invalid input", 42))
+# ('Invalid input', 42)
+
+```
+* ` __str__ `versus `__repr__`
+  The correct method name is __repr__, not __repre__.
+
+    * `__str__` provides a readable representation intended for users.
+    * `__repr__` provides a detailed representation intended for developers and debugging.  
+  ```py
+    error = ValueError("Invalid age")
+
+    print(error)   # calls str(error), which uses __str__
+    # Invalid age
+
+    repr(error)    # calls __repr__
+    # "ValueError('Invalid age')"
+  ```
+   * In an interactive Python console, entering the object directly usually displays its `__repr__` result:
+    ```py
+    >>> error
+    ValueError('Invalid age')`
+
+    ``` 
+
+## Exception chaining- Implicit chaining `__context__` and explicit chaining  `__cause__`
+### 1. Implicit chaining : `__context__`
+* When a new exception is raised while python handling another exception,Python automatically links the new exception to the active exception through `__context__`. 
+```py
+try:
+    int("hello")
+except ValueError:
+    raise TypeError("Conversion failed")
+
+```
+Python is automatically doing something follows
+```py
+type_error.__context__ = value_error 
+
+```
+
+The traceback displays
+```
+ValueError: invalid literal for int() with base 10: 'abc'
+
+During handling of the above exception, another exception occurred:
+
+TypeError: Conversion failed
+
+```
+So Implicit chainig does show a relationship: The TypeError occured while handling the `ValueError`.
+
+### 2.Explicit chaining : `__cause__` 
+
+Using `raise ... from e` says that the new exception happened specifically **because of e**.
+```py
+try:
+    int("abc")
+except ValueError as e:
+    raise TypeError("Conversion failed") from e
+
+```
+Python sets:
+`
+new_exception.__cause__=e
+`
+
+Traceback displays:
+
+```
+ValueError: invalid literal for int() with base 10: 'abc'
+
+The above exception was the direct cause of the following exception:
+
+TypeError: Conversion failed
+```
+
+```py
+try:
+    int("abc")
+except ValueError as e:
+    try:
+        raise TypeError("Conversion failed") from e
+    except TypeError as ex:
+        print(ex.__cause__ is e)          # True
+        print(ex.__context__ is e)        # True
+
+```
+
+::::info
+* __context__: happened **while handling** the previous exception.
+* __cause__: happened **because of** the previous exception.
+* The distiction is 
+  ```
+    Implicit chaining:
+    new_exception.__context__ = active_exception
+
+    Explicit chaining:
+    new_exception.__cause__ = specified_exception
+  ```
+* Traceback messages are 
+```py
+    try:
+        int("abc")
+    except ValueError as e:
+        try:
+            raise TypeError("Conversion failed") from e
+        except TypeError as ex:
+            print(ex.__cause__ is e)          # True
+            print(ex.__context__ is e)        # True
+```
+
+::::
+
+## Best Practices
+### 1.  Be Specific — Catch Exact Exceptions
+Never use a bare except: or overly broad except Exception (You dont know which one to catch). Catch only what you expect and can handle.
+
+```py
+# ❌ Bad
+try:
+    data = int(user_input)
+except:
+    pass
+
+# ✅ Good
+try:
+    data = int(user_input)
+except ValueError:
+    print("Input must be a number")
+
+```
+### 2.Dont swallow exceptions silently.
+A bare pass hides bugs. At minimum, log the error.
+
+```py
+# ❌ Bad
+except Exception:
+    pass
+
+# ✅ Good
+import logging
+except Exception as e:
+    logging.exception("Unexpected error: %s", e)
+    raise  # re-raise if you can't recover
+```
+
+### 3. Usually finally for cleanup
+finally runs whether or not an exception occurred — ideal for releasing resources.
+
+```py
+f = open("data.txt")
+try:
+    process(f)
+except IOError as e:
+    logging.error("File error: %s", e)
+finally:
+    f.close()  # always runs
+
+```
+Even better, use context managers (with) which handle this automatically:
+```py
+with open("data.txt") as f:
+     process(f)
+```
+
+### 4. Create Custom Exception Classes
+For libraries or large apps, define your own exception hierarchy so callers can catch precisely.
+
+```py
+class AppError(Exception):
+    """Base exception for this app."""
+
+class DatabaseError(AppError):
+    """Raised on DB failures."""
+
+class ValidationError(AppError):
+    """Raised on invalid input."""
+
+```
+Here for exception we are giving semantic meaning
+
+### 5.  Raise with Context — Use `raise ... from`
+Preserve the original traceback(Python's way of showing you exactly where and how an error occurred) when wrapping exceptions.
+
+```py
+try:
+    connect_to_db()
+except ConnectionRefusedError as e:
+    raise DatabaseError("Could not reach database") from e
+
+```
+### 6. Avoid Using Exceptions for Flow Control(if else)
+Exceptions are for exceptional situations, not regular branching logic(if else ).
+
+```py
+# ❌ Bad (using exceptions as if/else cases)
+try:
+    value = my_dict[key]
+except KeyError:
+    value = default
+
+# ✅ Good
+value = my_dict.get(key, default)
+
+```
+### 7. Don't let low-level exceptions()bubble up raw to the top()
+* low-level- exceptions -  exceptions that come from the deep technical internals of your program — things like databases, files, networks, and hardware
+* top-  The top is the place where your program starts execution — the outermost layer
+* raw- Raw means untranslated, unwrapped, and unprocessed — the exception travels from where it occurred (low level) all the way to the top exactly as it was, with no context added, no explanation, no meaningful message.eg : exception happened at low level but it becomes raw exception at UI level.
+* Most apps have layers: Database → Service → UI
+
+```py
+# Layer 1 — Database (low level)
+def fetch_user_from_db(user_id):
+    result = db.query(f"SELECT * FROM users WHERE id={user_id}")
+    return result
+
+# Layer 2 — Service (business logic)
+def get_user_profile(user_id):
+    return fetch_user_from_db(user_id)
+
+# Layer 3 — UI (top level)
+def show_profile_page(user_id):
+    return get_user_profile(user_id)
+
+
+❌ Bad — exception bubbles up raw to the top
+
+def fetch_user_from_db(user_id):
+    result = db.query(...)   # raises OperationalError if DB is down
+    return result
+
+def get_user_profile(user_id):
+    return fetch_user_from_db(user_id)   # does nothing, just passes it up
+
+def show_profile_page(user_id):
+    try:
+        return get_user_profile(user_id)
+    except OperationalError:             # caught here at the TOP
+        print("Something went wrong")
+
+The UI layer has no idea what OperationalError means in the context of showing a profile page. It can't do anything useful with it.
+
+✅ Good — caught at the right layer
+
+# Layer 1 — DB layer catches DB-specific error, wraps it meaningfully
+def fetch_user_from_db(user_id):
+    try:
+        result = db.query(...)
+    except OperationalError as e:
+        raise DatabaseUnavailableError("DB is down") from e  # meaningful!
+    return result
+
+# Layer 2 — Service layer catches and handles missing user
+def get_user_profile(user_id):
+    try:
+        return fetch_user_from_db(user_id)
+    except DatabaseUnavailableError:
+        return None   # service knows what to do — return empty profile
+
+# Layer 3 — UI only deals with UI concerns
+def show_profile_page(user_id):
+    user = get_user_profile(user_id)
+    if user is None:
+        print("Profile unavailable, try again later")
+
+```
+Each layer handles only what it understands. The raw OperationalError never leaks to the UI 
+
+Simple rule: Ask yourself — "Does this layer have enough information to do something useful with this error?" If yes, handle it here. If no, let the layer below handle it first.
+
+### 8. Log Exceptions Properly
+Use logging.exception() inside an except block — it automatically captures the full traceback.
+
+* logging.exception() vs logging.error()
+    * The only difference is that logging.exception() automatically includes the full traceback, while logging.error() just logs the message you give it.
+
+```py
+
+try:
+    data = int("abc")
+except ValueError as e:
+    logging.exception("Something went wrong")
+```
+
+Output:
+```
+ERROR:root:Something went wrong
+Traceback (most recent call last):
+  File "app.py", line 2, in <module>
+    data = int("abc")
+ValueError: invalid literal for int() with base 10: 'abc'
+
+```
+
+### 9. Validate Input Early ("Fail Fast")
+Catching bad data at the entry point is cleaner than letting errors propagate deep into logic.
+
+```py
+def process_age(age: int):
+    if age < 0:
+        raise ValueError(f"Age cannot be negative: {age}")
+    ...
+```
+::::info 
+**Quick Reference**
+
+|**Rule**|**Why**|
+|:---|:---|
+|Catch specific exceptions|Avoids masking unexpected bugs|
+|Never silently pass|Makes debugging possible|
+|Use with / finally|Guarantees resource cleanup|
+|Custom exception classes|Makes error handling precise and readable|
+|raise X from Y|Preserves full error context|
+|Log with logging.exception()|Captures full traceback automatically|
+
+::::
+
+## `contextlib.suppress` in Python
+
+contextlib.suppress is a context manager that **silently ignores specified exceptions** — a cleaner alternative to a try/except block where you'd just pass on an error.
+Basic Usage
+```py
+from contextlib import suppress
+
+with suppress(FileNotFoundError):
+    os.remove("file.txt")  # No error if file doesn't exist
+```
+ This is equivalent to:
+
+```py
+try:
+    os.remove("file.txt")
+except FileNotFoundError:
+    pass 
+
+```
+### a- Suppressing Multiple Exceptions
+
+Pass multiple exception types as arguments:
+
+```py
+with suppress(FileNotFoundError, PermissionError):
+    os.remove("/protected/file.txt")
+
+```
+
+### Examples
+* Safe delete a dict key without KeyError:
+  ```py 
+  with suppress(KeyError):
+    del my_dict["optional_key"] 
+
+  ```
+
+*  Skipping already-existing directory creation:  
+  ```py
+  
+    with suppress(FileExistsError):
+    os.mkdir("new_folder")
+    # Though os.makedirs(exist_ok=True) is better here
+
+  ```
+
+* Ignoring S`topIteration` manually:
+```py
+
+with suppress(StopIteration): # suppressing StopIteration Error
+    value = next(my_iterator)
+
+```
+
+-> **StopIteration**
+
+`my_iterator = iter([1, 2])`
+
+`
+next(my_iterator)  # 1
+next(my_iterator)  # 2
+next(my_iterator)  # 💥 StopIteration — tape is empty
+`
+
+If the iterator has another item, that item is assigned to value.
+If the iterator is exhausted, next() raises StopIteration.
+
+### When to use suppress vs try/except
+
+|**Scenario**|**Prefer**|
+|:---|:---|
+|You truly don't care about the exception|suppress|
+|You need to log, inspect, or react to the exception|try/except|
+|Multiple statements, only one might fail|try/except (more precise) to that statement only|
+|Clean one-liner "best effort" operation|suppress|
+
+“Clean one-liner” means a small, simple operation where ignoring one specific exception is not a problem.
+
+:::info
+   **Execution stops at the exception** — code after the failing line ,inside the with block is skipped.
+   ```py
+   with suppress(ValueError):
+      x = int("bad")   # raises → suppressed and going out of the with block
+      print("skipped") # this never runs
+                                                                
+
+   ```
+
+:::
+
