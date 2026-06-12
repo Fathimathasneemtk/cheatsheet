@@ -1,0 +1,299 @@
+Multithreading in Python allows multiple threads(smaller units of process) to run concurrently,enabling efficeint multitasking.It is very usefull for I\O bound taks like file handling,network requests,or user interactions.
+
+## What is a Process?
+A process is an executing program with
+* Program code (instruction to run)
+* Data(variables,buffers,workspace)
+* Excecution context(state of the process)
+
+**buffer** - It is temporary storage room used while data is being processed or transferred.
+This buffer can temporarily hold:
+* Data read from a file
+* Neywork packets
+* User input
+
+**Workpsace** - A workspace is memory used by a program as temporary working area while performing calculations or tasks.
+
+Example:
+* Intermediate results memory during computations
+* Temporary arrays memory during sorting
+
+## What is a Thread?
+A thread is a smallest unit of execution inside a process.
+* A process can have multiple threads
+* Threads share the same code and global data but have their own registers and local variables(stack).
+* Think of thread as lightweight subprocess
+  
+* A process is managed by a PCB(process control block).
+* Each thread is managed by TCB(Thread control block) and linked to its process.
+* Threads share the process's code and data but threads have their own stacks.
+
+
+## Working of Multithreading
+* On single-core CPUs, Python achieves the concurrency using context switching
+* This makes threads appear to run in parellel but actually not(multitasking)
+* Multiple tasks help in performing background tasks without blocking the main program.
+* A single thread process execute only one task at a time.
+* A multithreaded process can run multiple tasks in parallel by having separate stacks/registers for each thread, but sharing the same code and data.
+
+
+### Threading in Python
+
+Python provides the **threading** module to work with threads.
+
+```py
+import threading
+import time
+
+def square(num):
+    print(f"Square: {num*num}")
+    time.sleep(1)
+
+def cube(num):
+    print(f"Cube: {num*num*num}")
+    time.sleep(1)
+
+t1 = threading.Thread(target=square, args=(4,))
+t2 = threading.Thread(target=cube, args=(4,))
+
+t1.start()
+t2.start()
+t1.join() #wait for completion
+t2.join()
+
+print("Done!")
+
+```
+
+### ThreadPoolExecutor
+The concurrent.futures.ThreadPoolExecutor makes it easier to manage multiple threads without manually creating them.
+```py
+from concurrent.futures import ThreadPoolExecutor
+
+def worker(task):
+    print(f"Task {task} running")
+
+with ThreadPoolExecutor(max_workers=2) as executor:
+    executor.submit(worker,1)
+    executor.submit(worker,2)
+
+```
+
+**Explanation**
+* Creates a thread pool with 2 worker threads.
+* Submits two tasks to run in parallel.
+* Each task prints a message (Task 1 running, Task 2 running).
+* The thread pool manages execution and shuts down automatically.
+
+
+## Synchronization between threads
+Thread synchronisation is defined as a mechanism which ensures that two or more concurrent threads do not simultanously execute some particular program segment called **critical section**
+* **Critical section** is the part of the program where shared resource is accessed.
+* Concurrent accesses to shared resource can lead to **race condition**.
+* A race condition occurs when two or more threads can access shared data and they try to change it at the same time.As a result the values of the variables may be unpredictable and vary depending on the timings of context switches of the processes.
+
+```py
+import threading
+
+# global variable x
+x = 0
+
+def increment():
+    """
+    function to increment global variable x
+    """
+    global x
+    x += 1
+
+def thread_task():
+    """
+    task for thread
+    calls increment function 100000 times.
+    """
+    for _ in range(100000):
+        increment()
+
+def main_task():
+    global x
+    # setting global variable x as 0
+    x = 0
+
+    # creating threads
+    t1 = threading.Thread(target=thread_task)
+    t2 = threading.Thread(target=thread_task)
+
+    # start threads
+    t1.start()
+    t2.start()
+
+    # wait until threads finish their job
+    t1.join()
+    t2.join()
+
+if __name__ == "__main__":
+    for i in range(10):
+        main_task()
+        print("Iteration {0}: x = {1}".format(i,x))
+
+```
+output
+
+```
+Output:
+Iteration 0: x = 175005
+Iteration 1: x = 200000
+Iteration 2: x = 200000
+Iteration 3: x = 169432
+Iteration 4: x = 153316
+Iteration 5: x = 200000
+Iteration 6: x = 167322
+Iteration 7: x = 200000
+Iteration 8: x = 169917
+Iteration 9: x = 153589
+```
+
+In above program:
+* Two threads t1 and t2 are created in main_task function and global variable x is set to 0.
+* Each thread has a target function thread_task in which increment function is called 100000 times.
+* increment function will increment the global variable x by 1 in each call.
+* The expected final value of x is 200000 but what we get in 10 iterations of main_task function is some different values. This happens due to concurrent access of threads to the shared variable x. This unpredictability in value of x is nothing but race condition
+
+::::note
+Even with GIL sometimes you need lock,
+```py
+x = 0
+
+Thread A: read x -> 0
+(Thread switch)
+
+Thread B: read x -> 0
+Thread B: write 1
+
+(Thread switch)
+
+Thread A: write 1
+```
+Expected 
+`
+2
+`
+
+Actual
+`
+1
+`
+
+This is the race condition even with GIL
+
+Therefore you still need lock
+```py
+lock = threading.Lock()
+
+with lock:
+    x += 1
+
+```
+**Then what does the GIL protect?**
+
+The GIL mainly protects **CPython's internal interpreter data structures**.
+
+Without the GIL, operations like reference counting would require much more synchronization inside the interpreter.
+
+The GIL is for **interpreter safety**, not for **   **.
+
+::::
+
+## Using Locks
+
+Threading module provides a **lock** class to deal with the race conditions.
+* The lock is implemented using the **semaphore** object provided by OS.
+`
+A semaphore is a synchronization object that controls access by multiple processes/threads to a common resource in a parallel programming environment. It is simply a value in a designated place in operating system (or kernel) storage that each process/thread can check and then change. Depending on the value that is found, the process/thread can use the resource or will find that it is already in use and must wait for some period before trying again. Semaphores can be binary (0 or 1) or can have additional values. Typically, a process/thread using semaphores checks the value and then, if it using the resource, changes the value to reflect this so that subsequent semaphore users will know to wait.
+`
+
+**Lock** class provides following methods:
+* **acquire([blocking])** : To acquire a lock. A lock can be blocking or non-blocking.
+  * When invoked with the blocking argument set to **True**(the default),thread execution is blocked until the lock is unblocked,then lock is set to locked and return **True**.
+  * When invoked with the blocking set to **False**, thread execution is not blocked. If lock is unlocked,then set it locked and return **True** else return **False** immediately.
+* **release()**: To release a lock.
+  * When the lock is locked, reset it to unblocked, and return. If any other threads are blocked waiting for the lock to become unlocked,allow exactly one of them to proceed.
+  * if lock is already unlocked, a **ThreadError** is raised.
+
+```py
+import threading
+
+# global variable x
+x = 0
+
+def increment():
+    """
+    function to increment global variable x
+    """
+    global x
+    x += 1
+
+def thread_task(lock):
+    """
+    task for thread
+    calls increment function 100000 times.
+    """
+    for _ in range(100000):
+        lock.acquire()
+        increment()
+        lock.release()
+
+def main_task():
+    global x
+    # setting global variable x as 0
+    x = 0
+
+    # creating a lock
+    lock = threading.Lock()
+
+    # creating threads
+    t1 = threading.Thread(target=thread_task, args=(lock,))
+    t2 = threading.Thread(target=thread_task, args=(lock,))
+
+    # start threads
+    t1.start()
+    t2.start()
+
+    # wait until threads finish their job
+    t1.join()
+    t2.join()
+
+if __name__ == "__main__":
+    for i in range(10):
+        main_task()
+        print("Iteration {0}: x = {1}".format(i,x))
+
+
+```
+output
+```
+Iteration 0: x = 200000
+Iteration 1: x = 200000
+Iteration 2: x = 200000
+Iteration 3: x = 200000
+Iteration 4: x = 200000
+Iteration 5: x = 200000
+Iteration 6: x = 200000
+Iteration 7: x = 200000
+Iteration 8: x = 200000
+Iteration 9: x = 200000
+```
+
+**Adavantages**
+* It doesn't block the user.This is because threads are independent of each other.
+* Better use of system resource is possible since threads execute tasks concurrently.
+* Enhanced performance on multi-processor machines.
+* Multi-threaded servers and interactive GUIs use multithreading exclusively.
+
+**Disadvantages**
+* As number of threads increases, complexity increases.
+* Sychronizastion of shared resource is necessary.
+* It is difficult to debug,result is sometimes unpredictable.
+* COnstructing and synchronizing threads is CPU/memory intensive.
+
+
+
