@@ -1,0 +1,739 @@
+Multiprocessing refers to the abilty of a sysytem support more than one processor at a time.
+* Application in multiprocessing is broken to smaller routines and run independantly
+* The os allocates these theads into processors ,improving performace of the system.
+## 1. Process in OS
+A process is a program in execution.
+* When we write source code and compile it,the compiler generates an executable binary file.This executable file is called a program.When the program is loaded into the memory and executed it become a process
+* A process is an 'active' entity  instead of a program, which is considered as a 'passive' entity.
+* A single program can create many processes when run multiple times.
+### 1. Memory layout of a process
+A process in memory is divided into several distinct sections, each serving different purpose.
+* **Text section** : A text or code segment contains executable instructions.it is read only sectiion.
+* **stack** : The stack contains temporary data,such as function parameters return address and local variables.
+* **Data section**: Contains global variable.
+* **Heap section** : Dynamically memory allocated to process during its run time.
+### 2.Attributes of a process
+A process has several important attributes that helps the OS to manage and control it.
+* These attributes are stored in a structure called ProcessControlBLock(PCB).
+* **Process ID (PID)**: A unique number assigned to each process so the OS can identify it.
+* **Process state** : This shows the current state of the process like running,waiting or ready to execute.
+* **Priority and other CPU Scheduling Information**: Data that helps the OS to decide which process runs next, like priority levels and pointers to scheduling queues.
+* **I\O Infromation**:Information about the input and output device the process is using.
+* **File Descriptors**: Information about open files and network connections.
+* **Accounting information**: Tracks how long process has run,the amoun of CPU time used,and other resource usage data.
+* **Memory managaement information**: Details about the memory state allocated to the process,including where it is loaded in the memory and its structure of its memory layout(stack,heap etc.)
+ 
+## 2. Process Vs Thread
+Modern system are designed to handle multiple tasks effectively while maintaining good performance and responsiveness.These are achieved through the threads and processes.
+* Process is the independent program with its own memory.
+* Threads is small unit of process sharing same memory.
+**Process**: A program that is currently in execution within the OS.It operates in an indepedent environment and managing by the OS.
+* Process communicates each other using Inter-Process Communication(IPC) methods.
+**Thread** :This is Smallest unit of execution within a process.It enables a program to perform multiple tasks concurrently while sharing the same memory and resource.
+* Each thread had TID for identification
+* Like Proccess , thread also move to the states such as new,runnable,running,waiting and terminated.
+* Threads within the same process shares memory and resources,enabling faster communication.
+* Context switching can occur between threads to allow multiple tasks to execute effectively.
+### Similarities between Threads and Processes
+* **Units of Execution** : Both are execution units in OS and are part of process management.
+* **OS Scheduling & Preemption** : Both are scheduled by the OS for fair CPU allocation and can be preempted for multitasking.
+* **Execution context** : Each has its own execution context,including program counter,CPU registers and satck space.
+* **Creation during Runtime** : Both can create child entities during their execution lifecycle.
+*  **Communication and Resource Release** : Both can communicate using IPC mechanisms, and upton termination their allocated resource are released back to the OS.
+
+### Process VS Thread
+|**Process**|**Thread**|
+|:---|:---|
+|Program in execution|Part of process|
+|Takes more time to create and terminate|Takes less time to create and terminate|
+|Context switching is slow|Context switching is fast|
+|Heavyweight|Lightweight|
+|Less efficient communication|More efficient communication|
+|Blocking one process doesn't affect others|Blocking a user level(I\O operations) thread may block all|
+|Uses system calls|Created using APIs|
+|has its own PCB,stack,address space|shares PCB and addresss space ,has own TCB and stack|
+|Doesn't share data|Shares data with other threads|
+
+
+ 
+## 3. Why Multiprocessing
+If a system has only one processor, and it assigns several processes at a time,it will have to interrupt each task and switch to another,to keep all of the process is going.
+A multiprocessig system can have:
+* Multiprocessor: ie , a computer with more than one processor
+* Here CPU can easily execute several tasks at once,with each task using its own processor.
+## 4.Multiprocessing in Python
+```py
+# importing the multiprocessing module
+import multiprocessing
+ 
+def print_cube(num):
+    """
+    function to print cube of given num
+    """
+    print("Cube: {}".format(num * num * num))
+ 
+def print_square(num):
+    """
+    function to print square of given num
+    """
+    print("Square: {}".format(num * num))
+ 
+if __name__ == "__main__":
+    # creating processes
+    p1 = multiprocessing.Process(target=print_square, args=(10, ))
+    p2 = multiprocessing.Process(target=print_cube, args=(10, ))
+ 
+    # starting process 1
+    p1.start()
+    # starting process 2
+    p2.start()
+ 
+    # wait until process 1 is finished
+    p1.join()
+    # wait until process 2 is finished
+    p2.join()
+ 
+    # both processes finished
+    print("Done!")
+ 
+```
+* To import multiprocessing
+  ```py
+  import multiprocessing
+ 
+  ```
+* **target** : the function to be executed by process
+* **args** : the arguments to be passed to the target function
+* To start a process we use **start** method of process class
+* Inorder to stop the execution of current program until a program is complete, we use **join** method.
+ 
+Example: The concept of different process running on same python script.
+```py
+# importing the multiprocessing module
+import multiprocessing
+import os
+ 
+def worker1():
+    # printing process id
+    print("ID of process running worker1: {}".format(os.getpid()))
+ 
+def worker2():
+    # printing process id
+    print("ID of process running worker2: {}".format(os.getpid()))
+ 
+if __name__ == "__main__":
+    # printing main program process id
+    print("ID of main process: {}".format(os.getpid()))
+ 
+    # creating processes
+    p1 = multiprocessing.Process(target=worker1)
+    p2 = multiprocessing.Process(target=worker2)
+ 
+    # starting processes
+    p1.start()
+    p2.start()
+ 
+    # process IDs
+    print("ID of process p1: {}".format(p1.pid))
+    print("ID of process p2: {}".format(p2.pid))
+ 
+    # wait until processes are finished
+    p1.join()
+    p2.join()
+ 
+    # both processes finished
+    print("Both processes finished execution!")
+ 
+    # check if processes are alive
+    print("Process p1 is alive: {}".format(p1.is_alive()))
+    print("Process p2 is alive: {}".format(p2.is_alive()))
+ 
+```
+output
+```
+ID of main process: 28628
+ID of process running worker1: 29305
+ID of process running worker2: 29306
+ID of process p1: 29305
+ID of process p2: 29306
+Both processes finished execution!
+Process p1 is alive: False
+Process p2 is alive: False
+ 
+```
+* The main process has a different process ID and multiprocessing module spawns new processes with different pids as we create Process objects p1 and p2.
+* **os.getpid()** : It is used to get ID of the process running in the current target function.
+* Ecah process runs indepedentaly and has its own memory space.
+* As soon as execution of target function is finished,the process get terminated.We use is_alive() to check if the process is still active or not.
+ 
+## 5.Communication between processes
+In multiprocessing, any newly created process will do the following,
+* run indepedently
+* have their own memory space
+```py
+import multiprocessing
+ 
+# empty list with global scope
+result = []
+ 
+def square_list(mylist):
+    """
+    function to square a given list
+    """
+    global result
+    # append squares of mylist to global list result
+    for num in mylist:
+        result.append(num * num)
+    # print global list result
+    print("Result(in process p1): {}".format(result))
+ 
+if __name__ == "__main__":
+    # input list
+    mylist = [1,2,3,4]
+ 
+    # creating new process
+    p1 = multiprocessing.Process(target=square_list, args=(mylist,))
+    # starting process
+    p1.start()
+    # wait until process is finished
+    p1.join()
+ 
+    # print global result list
+    print("Result(in main program): {}".format(result))
+```
+output
+```
+Result(in process p1): [1, 4, 9, 16]
+Result(in main program): []
+```
+* in square_list,Since this function is called by process p1,"result" list is changed in the memory space of process p1 only.
+* Since main program is run by a different process, its memory space still contains empty list.
+ 
+### 1. Shared memory
+* Multiprocessing module provides **Array and Value objects** to share data between processes.
+* **Array** : a ctypes array allocated from **shared memory**.
+* **Value** : a ctypes object allocated from the **shared memory**.
+ 
+**ctypes** : It is a builtin python module that provides **C-compatible data types**.
+ 
+```py
+import multiprocessing
+ 
+def square_list(mylist, result, square_sum):
+    """
+    function to square a given list
+    """
+    # append squares of mylist to result array
+    for idx, num in enumerate(mylist):
+        result[idx] = num * num
+ 
+    # square_sum value
+    square_sum.value = sum(result)
+ 
+    # print result Array
+    print("Result(in process p1): {}".format(result[:]))
+ 
+    # print square_sum Value
+    print("Sum of squares(in process p1): {}".format(square_sum.value))
+ 
+if __name__ == "__main__":
+    # input list
+    mylist = [1,2,3,4]
+ 
+    # creating Array of int data type with space for 4 integers
+    result = multiprocessing.Array('i', 4)
+ 
+    # creating Value of int data type
+    square_sum = multiprocessing.Value('i')
+ 
+    # creating new process
+    p1 = multiprocessing.Process(target=square_list, args=(mylist, result, square_sum))
+ 
+    # starting process
+    p1.start()
+ 
+    # wait until the process is finished
+    p1.join()
+ 
+    # print result array
+    print("Result(in main program): {}".format(result[:]))
+ 
+    # print square_sum Value
+    print("Sum of squares(in main program): {}".format(square_sum.value))
+ 
+ 
+```
+output
+ 
+```
+Result(in process p1): [1, 4, 9, 16]
+Sum of squares(in process p1): 30
+Result(in main program): [1, 4, 9, 16]
+Sum of squares(in main program): 30
+ 
+```
+* First we create Array result like this,
+  ```py
+  result=multiprocessing.Array('i',4)
+ 
+  ```
+  * First argument is the datatype ,'i' stands for integer whereas 'd' stands for float datan type
+  * Secong argument is the size of the array.
+* We Create Value square_sum ,
+  ```py
+    square_sum=multiprocessing.Value('i')
+  ```
+  * Here we only needs specify data type,we can give deafult value as like this `square_sum=multiprocessing.Value('i',10)`
+* **result** array elements are given a value by specifying index of array element.
+```py
+  for idx, num in enumerate(mylist):
+      result[idx] = num * num
+```
+* square_sum is given a value by using its **value** attribute
+  ` square_sum.value = sum(result)`
+ 
+### 2.Server Process
+* A Manager Server Process is only started when you create a Manager.
+```py
+from multiprocessing import Manager
+ 
+manager = Manager()   # Starts a manager server process
+ 
+```
+* If program is simply `from multithreading import Process` ,here creates child processes,no manager server process is started.In multitheading, the parent process creates child process directly (using OS mechanism such as fork/spawn), not through a manager server process.
+* A server process can hold python objects and allows other processes to manipulate them using proxies.
+* `multiprocessing.Manager` this Manager class controls a server process.
+* managers provides a way to create data that can be shared between different processes.
+* managers are more flexible than shared memory but slower.
+* Relations
+  ```
+  Parent Process
+    |
+    +---- Manager Server Process
+    |
+    +---- Child Process 1
+    |
+    +---- Child Process 2
+ 
+  ```
+* The child process can't directly access the shared object which lives inside the Manger Server Process
+```py
+manager=Manager()
+shared_list=manager.list()
+ 
+```
+child process accessing shared resource like this,
+ 
+```
+Child Process
+     |
+     | proxy request
+     v
+Manager Server Process
+     |
+     | updates actual list
+     v
+shared_list
+ 
+```
+* **Why it is called a server?**
+  * Holds the real objects
+  * Waits for requests
+  * Other processes connects to it
+  * Performs operations on behalf of the those child processes.
+    
+example:
+```py
+import multiprocessing
+ 
+def print_records(records):
+    """
+    function to print record(tuples) in records(list)
+    """
+    for record in records:
+        print("Name: {0}\nScore: {1}\n".format(record[0], record[1]))
+ 
+def insert_record(record, records):
+    """
+    function to add a new record to records(list)
+    """
+    records.append(record)
+    print("New record added!\n")
+ 
+if __name__ == '__main__':
+    with multiprocessing.Manager() as manager:
+        # creating a list in server process memory
+        records = manager.list([('Sam', 10), ('Adam', 9), ('Kevin',9)])
+        # new record to be inserted in records
+        new_record = ('Jeff', 8)
+ 
+        # creating new processes
+        p1 = multiprocessing.Process(target=insert_record, args=(new_record, records))
+        p2 = multiprocessing.Process(target=print_records, args=(records,))
+ 
+        # running process p1 to insert new record
+        p1.start()
+        p1.join()
+ 
+        # running process p2 to print records
+        p2.start()
+        p2.join()
+ 
+```
+output
+ 
+```
+New record added!
+ 
+Name: Sam
+Score: 10
+ 
+Name: Adam
+Score: 9
+ 
+Name: Kevin
+Score: 9
+ 
+Name: Jeff
+Score: 8
+ 
+```
+* First of all, we create a manager object using:
+`  with multiprocessing.Manager() as manager:`
+All the lines under with statement block are under the scope of manager object.
+ 
+* Then, we create a list records in server process memory using:
+` records = manager.list([('Sam', 10), ('Adam', 9), ('Kevin',9)])`
+Similarly, you can create a dictionary as manager.dict method.
+ 
+### 6.communication between processes - Queue and pipe
+Multiprocessing supports two types of communication channel between processes:
+* Queue
+* Pipe
+#### 1.Queue
+A simple way to communicate between process with multiprocessing is to use a Queue to pass messages back and forth.
+* Any Python object can pass through a Queue.
+* Note : multiprocessing.Queue class is a near clone of queue.queue
+```py
+import multiprocessing
+ 
+def square_list(mylist, q):
+    """
+    function to square a given list
+    """
+    # append squares of mylist to queue
+    for num in mylist:
+        q.put(num * num)
+ 
+def print_queue(q):
+    """
+    function to print queue elements
+    """
+    print("Queue elements:")
+    while not q.empty():
+        print(q.get())
+    print("Queue is now empty!")
+ 
+if __name__ == "__main__":
+    # input list
+    mylist = [1,2,3,4]
+ 
+    # creating multiprocessing Queue
+    q = multiprocessing.Queue()
+ 
+    # creating new processes
+    p1 = multiprocessing.Process(target=square_list, args=(mylist, q))
+    p2 = multiprocessing.Process(target=print_queue, args=(q,))
+ 
+    # running process p1 to square list
+    p1.start()
+    p1.join()
+ 
+    # running process p2 to get queue elements
+    p2.start()
+    p2.join()
+ 
+```
+output
+```
+Queue elements:
+1
+4
+9
+16
+Queue is now empty!
+ 
+```
+* Elemenets are inserted into the queue using **put** method
+* In order to print queue elements we use **get** method until queue is not empty.
+ 
+#### 2.Pipes
+* A pipe can have only 2 endpoints.Hence it is preferred over queue when only two-way communication is required.
+* Multiprocessing module provides **Pipe()** function which returns a pair of connection objects connected by a pipe.
+* The two objects returned by the Pipe function represents the 2 ends of the pipe.
+* Each connection object has **send()** and **recv()** methods.
+```py
+import multiprocessing
+ 
+def sender(conn, msgs):
+    """
+    function to send messages to other end of pipe
+    """
+    for msg in msgs:
+        conn.send(msg)
+        print("Sent the message: {}".format(msg))
+    conn.close()
+ 
+def receiver(conn):
+    """
+    function to print the messages received from other
+    end of pipe
+    """
+    while 1:
+        msg = conn.recv()
+        if msg == "END":
+            break
+        print("Received the message: {}".format(msg))
+ 
+if __name__ == "__main__":
+    # messages to be sent
+    msgs = ["hello", "hey", "hru?", "END"]
+ 
+    # creating a pipe
+    parent_conn, child_conn = multiprocessing.Pipe()
+ 
+    # creating new processes
+    p1 = multiprocessing.Process(target=sender, args=(parent_conn,msgs))
+    p2 = multiprocessing.Process(target=receiver, args=(child_conn,))
+ 
+    # running processes
+    p1.start()
+    p2.start()
+ 
+    # wait until processes finish
+    p1.join()
+    p2.join()
+ 
+ 
+```
+output
+ 
+```
+Sent the message: hello
+Sent the message: hey
+Sent the message: hru?
+Received the message: hello
+Sent the message: END
+Received the message: hey
+Received the message: hru?
+ 
+ 
+```
+* Message is send from one end of pipe to another using **send** method.
+* To receive any messages at one end of the pipe, we use **recv** method.
+* **NOte** : Data in a pipe may become corrupted if two processes(or threads) try to read from or write to the same end of the pipe at the same time.Of course, there is no risk of corruption from processes using different ends of the pipe at the same time.
+* Also note that queues do proper synchronisation between processes at the expense of more complexity.Hence queues are said to be Thread and Process safe.
+ 
+## 7. Synchronization between processes
+Process synchronization is defined as a mechanism which ensures that two or more concurrent process do not simultaneously execute some particluar program segment known as **critical section**.
+* **Critical section** : it refers to the parts of the program where the shared resource is accessed.
+* Concurrent access to shared resource can lead to **race condition**
+* **Race condition** : A race condition occurs when two or more processes can access shared data and they try to change it at the same time. As a result, the values of variables may be unpredictable and vary depending on the timings of context switches of the processes.
+* Example showing race condition
+```py
+# Python program to illustrate
+# the concept of race condition
+# in multiprocessing
+import multiprocessing
+ 
+# function to withdraw from account
+def withdraw(balance):    
+    for _ in range(10000):
+        balance.value = balance.value - 1
+ 
+# function to deposit to account
+def deposit(balance):    
+    for _ in range(10000):
+        balance.value = balance.value + 1
+ 
+def perform_transactions():
+ 
+    # initial balance (in shared memory)
+    balance = multiprocessing.Value('i', 100)
+ 
+    # creating new processes
+    p1 = multiprocessing.Process(target=withdraw, args=(balance,))
+    p2 = multiprocessing.Process(target=deposit, args=(balance,))
+ 
+    # starting processes
+    p1.start()
+    p2.start()
+ 
+    # wait until processes are finished
+    p1.join()
+    p2.join()
+ 
+    # print final balance
+    print("Final balance = {}".format(balance.value))
+ 
+if __name__ == "__main__":
+    for _ in range(10):
+ 
+        # perform same transaction process 10 times
+        perform_transactions()
+```
+output
+```
+Final balance = 1311
+Final balance = 199
+Final balance = 558
+Final balance = -2265
+Final balance = 1371
+Final balance = 1158
+Final balance = -577
+Final balance = -1300
+Final balance = -341
+Final balance = 157
+ 
+```
+* This happens due to concurrent access of processes to shared shared data balance.This unpredictability in balance is race condition.
+ 
+### Using Locks
+Multiprocessing module provide a **Lock** class to deal with the race conditions.
+* **Lock** is implemented using **semaphore** object provided by OS.
+* **Semaphore object** is simply a value in a designated place in OS storage that each process can check and then change.
+* Depending on the value that is found,the process can use the resource or will find that is already in use and must wait for some periods before trying again.
+* Semphore can be binary(0 or 1)  or can have additional values.
+* Typically a process using semaphores checks the value and then, if it using the resource changes the value to reflect this so that subsequent semaphore users will know to wait.
+* Example
+```py
+# Python program to illustrate
+# the concept of locks
+# in multiprocessing
+import multiprocessing
+ 
+# function to withdraw from account
+def withdraw(balance, lock):    
+    for _ in range(10000):
+        lock.acquire()
+        balance.value = balance.value - 1
+        lock.release()
+ 
+# function to deposit to account
+def deposit(balance, lock):    
+    for _ in range(10000):
+        lock.acquire()
+        balance.value = balance.value + 1
+        lock.release()
+ 
+def perform_transactions():
+ 
+    # initial balance (in shared memory)
+    balance = multiprocessing.Value('i', 100)
+ 
+    # creating a lock object
+    lock = multiprocessing.Lock()
+ 
+    # creating new processes
+    p1 = multiprocessing.Process(target=withdraw, args=(balance,lock))
+    p2 = multiprocessing.Process(target=deposit, args=(balance,lock))
+ 
+    # starting processes
+    p1.start()
+    p2.start()
+ 
+    # wait until processes are finished
+    p1.join()
+    p2.join()
+ 
+    # print final balance
+    print("Final balance = {}".format(balance.value))
+ 
+if __name__ == "__main__":
+    for _ in range(10):
+ 
+        # perform same transaction process 10 times
+        perform_transactions()
+ 
+```
+output
+ 
+```
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+Final balance = 100
+```
+* lock object is created, and then it is passed as the argument of target function.
+* In the critcal section of target function, we apply lock using **lock.acquire()** method.As soon as a lock is acquired, no other process can access its critical section until the lock is released using **lock.release()** method.
+ 
+## 8. Pooling between processes
+* For normal programs usually ,only one of the core is used for program execution and its quite possible that other cores remains idle.
+* In order to utilize all the core multiprocessing module gives **Pool** class.
+* The **Pool** class represents a pool of worker processes.
+* The tasks is offloaded/distributed among the cores/processes automatically by **Pool** object.
+* User doesn't need to worry about creating processes explicitly.
+**example**
+```py
+# Python program to understand
+# the concept of pool
+import multiprocessing
+import os
+ 
+def square(n):
+    print("Worker process id for {0}: {1}".format(n, os.getpid()))
+    return (n*n)
+ 
+if __name__ == "__main__":
+    # input list
+    mylist = [1,2,3,4,5]
+ 
+    # creating a pool object
+    p = multiprocessing.Pool()
+ 
+    # map list to target function
+    result = p.map(square, mylist)
+ 
+    print(result)
+ 
+```
+output
+ 
+```
+Worker process id for 2: 4152
+Worker process id for 1: 4151
+Worker process id for 4: 4151
+Worker process id for 3: 4153
+Worker process id for 5: 4152
+[1, 4, 9, 16, 25]
+ 
+```
+* There are few arguments for gaining more control over offloading of task.These are
+  * **processes**: specify the number of worker processes.
+  * **maxtasksperchild**: specify the maximum number of task to be assigned per child process.
+* The relationship,
+```
+Process
+   ├── Thread 1
+   │      ├── Task A
+   │      ├── Task B
+   │      └── Task C
+   │
+   ├── Thread 2
+   │      ├── Task D
+   │      └── Task E
+   │
+   └── Thread 3
+          └── Task F
+```
+* All the processes in a pool can be made to perform some initialization using these arguments.
+  * **initializer**: specify an initialization function for worker processes.
+  * **initargs** : arguments to be passed to initializer function.
+* As a result we map pool object to some square function.As a result, the contents of mylist and definition of square will be distributed among the cores.
+* Once all the worker processes finish their task, a list is returned with a final result.
