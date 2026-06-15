@@ -1,0 +1,143 @@
+Global interpreter lock(GIL) is a lock used in CPython interpreter(the default and most widely used Python Implentaion).
+* It ensures only one thread excecute at a time even if you have multiple CPU cores(multithreading case , not for multiprocessing case).
+* Python supports Mulithreading , but threads can't run CPU-bound code parallel inside CPython.
+* However, I\O-bound multitreading does work well because threads allowed to release the GIL while waiting for I\O operations.
+ 
+## Need for GIL
+* In CPython, every python object uses **reference countuing** for memory management.
+```py
+import sys
+ 
+a = "Geek"
+print(sys.getrefcount(a))
+ 
+b = a
+print(sys.getrefcount(a))
+ 
+```
+* **Issue** : If two threads simultaneosly modify the reference count, it can cause: corrupted memory,inconsistent object states and crashes.
+* **Possible solution** : Cpython could lock every object or memory update from different threads, but that would make Python much slower.
+* **Final decision** : Introduce one GIL, Cpython designers add one single interpreter-wide lock,the GIL which guarantees:
+    * Thread-safe management
+    * Simplicity of implementation
+    * Fast perfomance for single-threaded program
+ 
+## Factors that led to the GIL
+1. CPython uses C at the core,most extensions(NumPy,PIL etc) are written in C.C doesn't automatically manages memory.hence CPython implements its own reference counting.The GIL made memory management simple
+2. Perfomance boost for single-threaded program,A single lock is faster than thousands of fine-grained (to avoid race conditions) locks.
+3. Ease of implementation, CPython was designed in the early 1990s when multi-core processors were rare. The GIL was an easy and safe solution.
+ 
+## Impact of GIL on Multi-threaded Programs
+
+Depending on your workload,the GIL has different effects.
+
+### 1. CPU-bound programs:
+* Program that do heavy calculations:loops,math,compression,hasing,etc are CPU-bound operations.
+* In CPU-bound task,multiple threads do NOT run in parallel because the GIL doesn't allow it.
+* ** Note**: The execution time varies depending on the hardware, operating system, Python version, and current system workload.
+
+```py
+import time
+
+COUNT = 50_000_000
+
+def countdown(n):
+    while n > 0:
+        n -= 1
+
+start = time.time()
+countdown(COUNT)
+print("Time taken:", time.time() - start)
+
+```
+
+ouptut
+```
+Time taken: <varies by system>
+```
+**Explanation**: This example performs a CPU-intensive countdown operation using a single thread. It serves as a baseline for comparing the effect of multithreading on CPU-bound workloads.
+
+### 2. CPU-bound with two threads(GIL blocks true parallelism)
+Despite of 2 threads , performance is almost the same because only one thread runs bytecode at ANY moment.
+```py
+import time
+from threading import Thread
+
+COUNT = 50_000_000
+
+def countdown(n):
+    while n > 0:
+        n -= 1
+
+t1 = Thread(target=countdown, args=(COUNT//2,))
+t2 = Thread(target=countdown, args=(COUNT//2,))
+
+start = time.time()
+t1.start(); t2.start()
+t1.join(); t2.join()
+print("Time taken:", time.time() - start)
+
+
+```
+output
+```
+Time taken: <varies by system>
+```
+**Explanation**: Although two threads are used, the GIL prevents them from executing Python bytecode simultaneously. As a result, CPU-bound tasks typically see little or no performance improvement from multithreading.
+
+## I/O-Bound Programs
+Program that wait for I\O: downloading files,reading files,database quiries,API calls.
+* Here doen't slow you down, because 
+  * When a threard waits for I\O ->it releases the GIL
+  * Other threads can run during the time.
+* So I\O bounded tasks works well in python.
+
+## Limitations of Removing the GIL
+* **Too many libraries depend on it** : Numpy,Pandas,OpenCV and thousands of C-extension packages rely on the GIL.
+* **WIthout GIL, Python would slow down**: Many small locks would make Python slower for normal programs.
+* **Compatibility issues**: Removing GIL breaks how existing python code works
+* **Previous attempts failed**: They made python slower and used more memory
+
+However, Python 3.13 introduces optional builds without the GIL, but it is still experimental.
+
+## Techniques for Overcoming GIL Limitations
+### 1. Use Multiprocessing (Best for CPU-bound tasks)
+Each Process has it own interpreter and GIL,so they truly run in parallel.
+
+```py
+import multprocessing
+import time
+
+COUNT=5000000
+def count(n):
+    while n>0:
+        n-=1
+
+if __name__=="__main__":
+    p1=multprocessing.Process(target=countdown,args=(COUNT//2))
+    p2=multiprocessing.Process(target=countdown,args=(COUNT//2))
+
+    start=time.time()
+    p1.start(),p2.start()
+    p1.join(),p2.join()
+    print(f"Time taken- {start-time.time()}")
+
+```
+This uses multiple CPU Cores.
+
+### 2. Use libraries that releases the GIL
+* NumPy
+* OpenCV
+* Pandas(some operations)
+* SciPy
+
+**NOte**: These libraries runs heavy computations in C and releases the GIL,allowing parallel execution.
+
+### 3.Use asyncio for I\O tasks.
+
+asyncio doesn't use multithreads.It uses a single thred that switches between tasks efficeintly.
+Great for 
+* API calls
+* network tasks
+* database operations
+  
