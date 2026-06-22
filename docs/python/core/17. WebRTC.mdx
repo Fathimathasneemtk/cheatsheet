@@ -1,0 +1,67 @@
+## 1. What is WebRTC?
+
+**WebRTC** is a **free, open-source technology** that enables **real-time communication (audio, video, and data)** directly between browsers or devices.
+
+**In simple terms:** It lets two users **talk, video call, or share data directly from their browsers** — without installing any plugins or third-party apps.
+
+**Key ideas:**
+- Works using **JavaScript APIs + HTML5**
+- Enables **peer-to-peer (P2P) communication**
+- Removes the need for third-party software like Skype (before WebRTC, browsers couldn't natively support audio/video streaming, so dedicated apps like Skype were required)
+
+* Peer-to-peer (P2P) communication means two devices talk directly to each other, without sending their data through a central server in between.
+
+> **Common misconception:** WebRTC is often thought to work *only* in browsers. While it was originally designed for the web, it has evolved into a **universal standard for real-time communication** used across almost every platform (mobile apps, IoT devices, desktop software, etc.).
+
+---
+## 2. Why WebRTC Was Created
+ 
+**Before WebRTC:**
+- Real-time communication required **plugins** (e.g., Flash) — a plugin was needed to run interactive content on web pages.
+- Needed **complex, dedicated server setups** to relay audio/video.
+**WebRTC solves this by:**
+- Standardizing APIs through **W3C** and **IETF**
+- Allowing **secure, browser-based communication** with no plugins
+
+* "standardizing" though thses 2 organization, here just means these two organizations wrote down the official rules that browser makers and network engineers had to follow, so that WebRTC would work the same way everywhere
+
+
+### Standards Bodies Involved
+ 
+| Organization | Full Form | Role |
+|---|---|---|
+| **W3C** | World Wide Web Consortium | Standardizes the **browser API layer** — standardizes web technologies like HTML, CSS, browser behavior, and Web APIs |
+| **IETF** | Internet Engineering Task Force | Standardizes the **network/protocol layer** — how the internet communicates underneath |
+ 
+* The JavaScript API surface is a subset of "Web APIs".
+* **IETF** has protocols like **SDP** (Session Description Protocol),**ICE**,**STUN/TURN** protocols,**DTLS/SRTP**.
+---
+## 3. Key APIs in WebRTC (Very Important)
+
+The **W3C** published formal specifications defining exactly how JavaScript should be able to talk to a browser's media and networking features. This is what gave us the actual functions developers call, like:
+ 
+WebRTC revolves around **3 core APIs**:
+ 
+### 3.1 `getUserMedia()`
+- **Purpose:** Captures media from the user's devices
+- **Accesses:**
+  - 🎥 Camera
+  - 🎤 Microphone
+- **Example use:** Capturing local video input for a call
+
+
+### 3.2 `RTCPeerConnection`
+- The **heart of WebRTC**
+- Establishes the connection between two peers
+- **Handles:**
+  - Audio/video streaming
+  - Network negotiation
+  - Encryption
+  
+* Network negotiation is the process where two peers figure out the best way to actually reach each other over the network.
+
+### 3.3 `RTCDataChannel`
+- Used for sending **non-media data** between peers, such as:
+  - Text messages
+  - Files
+  - Game data
