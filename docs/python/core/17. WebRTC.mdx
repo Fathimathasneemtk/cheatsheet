@@ -65,3 +65,30 @@ WebRTC revolves around **3 core APIs**:
   - Text messages
   - Files
   - Game data
+
+---
+ 
+## 4. How WebRTC Works (Step-by-Step)
+ 
+### Step 1: Media Capture
+- The process begins locally: the app calls `getUserMedia()` to request access to the camera and microphone.
+- The browser prompts the user for permission.
+- If granted, a **`MediaStream`** object is created, containing the audio and video tracks.
+### Step 2: Signaling (The "Handshake")
+Before any media can flow, the two peers must exchange information about their media capabilities (codecs, resolution, IP address, etc.). This exchange uses **SDP (Session Description Protocol)**.
+ 
+- **The Offer:** Peer A creates an "Offer" (an SDP object) and sends it to Peer B through a **Signaling Server** — a middleman server typically using **WebSockets or HTTP**.
+- **The Answer:** Peer B receives the offer, sets it as its "Remote Description," creates an "Answer" (its own SDP), and sends it back to Peer A.
+Every peer maintains two SDP "slots" in memory:
+- A **signaling server** is just a regular server (built and hosted by whoever makes the app — not provided by WebRTC itself) that acts as the middleman to introduce two peers to each other before they can connect directly.
+ 
+| Slot | Meaning |
+|---|---|
+| **Local Description** | "This is what I am capable of" — my codecs, security keys, IP |
+| **Remote Description** | "This is what the other peer is capable of" |
+ 
+> The "Offer" and "Answer" are both instances of the SDP object.
+ 
+**Summary:** Devices exchange IP addresses and media capabilities.
+ 
+> ⚠️ **Important:** WebRTC does **NOT** define how signaling happens. A separate server (e.g., using WebSocket) is required to perform this step.
