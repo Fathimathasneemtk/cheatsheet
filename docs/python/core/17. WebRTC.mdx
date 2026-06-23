@@ -92,3 +92,111 @@ Every peer maintains two SDP "slots" in memory:
 **Summary:** Devices exchange IP addresses and media capabilities.
  
 > ⚠️ **Important:** WebRTC does **NOT** define how signaling happens. A separate server (e.g., using WebSocket) is required to perform this step.
+
+### Step 3: Network Discovery (ICE & NAT Traversal)
+While signaling is in progress, the peers must find a way to connect their IP addresses directly. This is handled by **ICE (Interactive Connectivity Establishment)**.
+ 
+- **NAT (Network Address Translation):** The technology that lets multiple devices (phone, laptop, smart fridge) share a single public IP address to access the internet.
+- **ICE Candidates:** Each peer generates a list of potential IP addresses and ports where it can be reached.
+- **STUN Server:** Tells a device behind a NAT what its public IP address is.
+- **TURN Server:** If a direct connection isn't possible (e.g., strict corporate firewalls), a TURN server acts as a **relay**, passing data between the two peers.
+> Firewalls act as the "security guards" of a network, controlling what traffic is allowed in and out.
+ 
+#### STUN vs TURN
+ 
+| Server | Role | Used When |
+|---|---|---|
+| **STUN** | Discovers the device's public IP/port | Tried **first**, for direct P2P connection |
+| **TURN** | Relays media/data between peers | Used **only if** a direct connection fails |
+ 
+> ⚠️ **Important:** WebRTC does **not** use STUN and TURN simultaneously for data transfer. It always **tries STUN first**, and falls back to **TURN only if needed**.
+ 
+### Step 4: Connection Establishment
+Once SDPs have been exchanged and a valid network path is found via ICE candidates:
+- `RTCPeerConnection`  API establishes the link between peers.
+- The browser performs a security handshake using **DTLS/SRTP protcols** to ensure all data is encrypted.
+- The peers "poke holes" through their firewalls to allow **UDP** data packets to flow.
+- DTLS — Datagram Transport Layer Security
+  - Think of DTLS as TLS (the same encryption tech behind HTTPS) adapted for UDP instead of TCP.
+- SRTP — Secure Real-time Transport Protocol
+  - It's built on top of RTP (Real-time Transport Protocol — the standard for streaming audio/video over a network), adding encryption and authentication.
+|Protocol|Secures|Used for|
+|:---|:---|:---|
+|DTLS|Key exchange + the data channel|Setting up exchanges of encryption keys; encrypting text/files/game data|
+|SRTP|Audio/video media|Encrypting the actual call media|
+
+**The problem it solves:**
+* By default, most home/office routers and firewalls follow this rule:
+
+* "Allow outgoing traffic. Block incoming traffic — unless it's a reply to something we already sent out."
+
+* This is great for security, but it's a problem for P2P: if Peer B tries to send Peer A data out of nowhere, Peer A's firewall sees it as an unsolicited incoming connection and blocks it.
+**How "poking a hole" works:**
+
+1. Peer A sends a small outgoing packet toward Peer B (even just a tiny test packet, as part of the ICE connectivity checks).
+2. Peer A's own firewall sees this as outgoing traffic it approved, so it temporarily opens up a "hole" — it remembers: "I sent something to Peer B's IP/port, so I'll allow replies back from that same IP/port."
+3. Peer B does the same thing in the other direction at the same time — sending its own outgoing packet toward Peer A.
+4. Now both firewalls have "holes" open for each other's traffic, because each one thinks it just made an outgoing connection and is only allowing the expected reply.
+5. Once both holes are open, real audio/video/data can now flow freely through, in both directions — without either firewall blocking it.
+
+### Step 5: Streaming Media and Data
+- Media tracks (audio/video) now stream **directly** from one peer to the other.
+- If a Data Channel was created, files or text messages can be sent over the same connection.
+- WebRTC continuously monitors connection quality and can adjust video resolution or bitrate if the network becomes congested.
+### Quick Recap
+- **Signaling** → setup only (exchanging connection info)
+- **Actual communication** → peer-to-peer (direct media/data flow)
+---
+
+## 5. Simple Example: Starting a Video Call - IMP
+ 
+1. Browser asks for camera/microphone permission.
+2. Connection info is exchanged with the other user (signaling).
+3. Network discovery takes place (ICE/STUN/TURN).
+4. A direct connection is established.
+5. Video/audio starts streaming instantly.
+---
+ 
+## 6. Real-World Applications
+ 
+WebRTC powers many apps already in everyday use:
+- **Video calls** — Google Meet, Zoom
+- **Messaging** — WhatsApp Web
+- Customer support chat
+- Online gaming
+- Live streaming
+---
+## 7. Advantages and Disadvantages
+ 
+| Advantages | Disadvantages |
+|---|---|
+| **Low latency** — direct P2P connection means faster communication | **Browser compatibility issues** — not all browsers fully support all features |
+| **No plugins** — works natively inside the browser | **High bandwidth usage** — especially for video calls |
+| **Secure** — encryption enabled by default | **Complex setup** — requires a signaling server (WebSocket/HTTP) and handling NAT traversal complexity |
+| **Cost-efficient** — less server usage since media flows P2P | |
+
+* "High bandwidth usage" means a WebRTC video/audio call consumes a large amount of network data, much more than things like text messaging or even loading a typ…"High bandwidth usage" means a WebRTC video/audio call consumes a large amount of network data, much more than things like text messaging or even loading a typical webpage
+ 
+---
+## 8. Important Technical Concepts (Glossary)
+ 
+| Term | Definition |
+|---|---|
+| **Peer-to-Peer (P2P)** | Devices communicate directly with each other, without routing media through a central server |
+| **Signaling** | The exchange of connection information (SDP offers/answers, ICE candidates) before communication begins |
+| **ICE (Interactive Connectivity Establishment)** | The process of finding the best/most direct network path between peers |
+| **Codecs** | Used to compress and decompress audio/video data (e.g., **VP8** for video, **Opus** for audio) |
+
+---
+
+## 9. Final Summary
+ 
+WebRTC is:
+- A **modern web standard**
+- A technology that enables **real-time communication directly in browsers** (and increasingly, across other platforms)
+- Built on:
+  - JavaScript APIs (`getUserMedia`, `RTCPeerConnection`, `RTCDataChannel`)
+  - Peer-to-peer networking (with signaling, ICE, STUN/TURN for connection setup)
+  - Built-in encryption (DTLS/SRTP)
+**WebRTC is the backbone of modern real-time web communication apps.**
+
