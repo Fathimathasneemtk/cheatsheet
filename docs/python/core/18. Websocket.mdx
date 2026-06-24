@@ -1246,6 +1246,723 @@ request.session["name"] = "John"
    real storage (DB row / Redis entry) tied to that session_id
 
 ```
+### B. Token-Based Authentication (Modern APIs)
+ 
+**Idea:** The server does **not** store session state — the client holds everything (the token).
+ 
+**Flow:**
+1. **Login:** username + password → server.
+2. **Server generates a token:** `token = "xyz123abc"`.
+3. **Server sends the token:** `{ "token": "xyz123abc" }`.
+4. **Client stores the token** (local storage / memory / app storage).
+5. **Client sends the token on every request:** `Authorization: Token xyz123abc`.
+6. **Server verifies the token:** `token → user`.
+**Where data lives:**
+ 
+| Location | Stores |
+|---|---|
+| Client | The token |
+| Server | Usually nothing, or a minimal token→user mapping |
+ 
+**Pros:** Stateless (no server memory needed); scales easily; best for APIs and mobile apps.
+**Cons:** Slightly less secure if mishandled; tokens can be stolen; requires expiry handling.
+ 
+### Two Ways to Implement Token Auth
+ 
+**1. Token Stored in a Database (e.g., Django REST Framework's Simple Token Auth)**
+ 
+The server *does* store a token → user mapping:
+1. User logs in → server creates token `abc123`.
+2. Server stores `abc123 → user_id = 5`.
+3. Client sends `Authorization: Token abc123`.
+4. Server looks up `abc123` in the DB → finds `user_id = 5`.
+```python
+Token.objects.get(key=token)  # DB lookup
+```
+ 
+| Location | Stores |
+|---|---|
+| Client | Token |
+| Server | Token → user mapping |
+ 
+**2. JWT (JSON Web Token) — No DB Lookup Needed**
+ 
+The token itself **contains** the user data (encoded, not stored server-side):
+1. Server creates: `token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")`. #payload={"user_id":--,"exp":--}
+2. Client sends: `Authorization: Bearer <JWT>`.
+3. Server **decodes** the token directly: `user_id = 5`. No database lookup required.
+```python
+jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+```
+ 
+| Location | Stores |
+|---|---|
+| Client | Token |
+| Server | Only the secret key (used for verification) |
+ 
+### DB Token vs JWT
+ 
+| | DB-backed token | JWT |
+|---|---|---|
+| Server storage | ✅ Yes | ❌ No |
+| Lookup needed | ✅ Yes | ❌ No |
+| Speed | Slower | Faster |
+| Revocation | Easy (delete from DB) | Hard (token is valid until it expires) |
+ 
+**Analogy:**
+- DB token = an ID number; the server checks a register.
+- JWT = an ID card; the server just verifies the signature.
+
+### JWT Signing Algorithms
+ 
+**Symmetric (e.g., HS256):**
+- Same `SECRET_KEY` used to both **encode** and **decode**.
+- The secret key is saved on the server only.
+**Asymmetric (e.g., RS256):**
+ 
+| Operation | Key used |
+|---|---|
+| Encode (sign) | Private key |
+| Decode (verify) | Public key |
+ 
+```python
+# Encode
+jwt.encode(payload, PRIVATE_KEY, algorithm="RS256")
+ 
+# Decode
+jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+```
+
+| Algorithm | Best suited for |
+|---|---|
+| HS256 (shared secret) | Simple apps, single-server Django setups |
+| RS256 (public/private key pair) | Large systems, microservices (verification can happen anywhere with just the public key) |
+ 
+### Session Auth vs Token Auth — Summary
+ 
+| | Session-Based | Token-Based |
+|---|---|---|
+| **Storage** | Server | Client |
+| **State** | Stateful | Stateless |
+| **Scaling** | Harder | Easier |
+| **Typical usage** | Django templates / traditional web apps | APIs / mobile apps |
+| **Carrier** | `sessionid` cookie | `Authorization` header |
+ 
+---
+## 18. WebSocket Authentication
+ 
+### The Core Problem
+ 
+Normal HTTP APIs send a token via a header:
+```
+Authorization: Token abc123
+```
+But **WebSocket protocol, especially from browsers, cannot send custom headers** during the handshake — so authentication needs a workaround.
+
+* **It's not a limitation of the WebSocket protocol itself** — **it's a limitation of the browser's JavaScript `WebSocket API`**. The websocket protocol can carry custom headers; browsers just don't give you a way to set them.
+
+WebSocket has **no standard built-in auth system** like HTTP does, so different applications use different workarounds during the handshake phase (HTTP → WebSocket upgrade).
+ 
+### Common Authentication Methods
+ 
+| Method | How it works | Pros | Cons |
+|---|---|---|---|
+| **JWT in `Authorization` header**
+(applicable in -- HTTP, websocket -outside of browser)  | `Authorization: Bearer <token>` | Most secure, clean architecture, used in production backend systems; works in Node.js, Python (Django Channels, FastAPI) | **Browsers don't allow setting this header on WebSocket connections (HTTP request it does)** — for websocket connections: only works outside the browser  (mobile apps, backend-to-backend, tools like Postman) |
+| **JWT in query parameters**(applicable http,websocket) | `ws://localhost:8000/ws?token=<jwt>` | Very widely used, works in browsers, easy to implement | Token is visible in URL, browser history, and server logs. Mitigated with short-lived or one-time tokens |
+| **Cookies / session-based auth**(applicable http,websocket) | Browser automatically sends the session cookie during the WebSocket handshake | Very common in Django; secure if combined with "HTTPS + `HttpOnly` cookies"; zero extra effort from the developer | Mainly convenient for browser-based web apps |
+| **First-message authentication** | Connect first, then send `{"token": "abc123"}` as the first message; server validates it | Works in any environment | Connection is open before authentication completes — slight security risk; less preferred |
+
+**For session based auth - The protections**
+
+| Protection | What it guards against |
+|---|---|
+| **HTTPS** | Without it, the cookie travels over the network in plain text — anyone snooping on the network (e.g., on public WiFi) could read the `sessionid` cookie as it's sent and steal it. HTTPS encrypts the connection, so the cookie can't be read in transit. |
+| **`HttpOnly` flag** | Without it, malicious JavaScript injected into your page (via an XSS attack) could read the cookie using `document.cookie` and steal it. `HttpOnly` blocks JavaScript from reading the cookie at all — only the browser (sending it automatically) and the server (reading it) can access it. |
+
+### Headers That *Do* Work Automatically in Browser WebSocket Handshakes
+ 
+Even though custom headers like `Authorization` are blocked, browsers still automatically send:
+- `Cookie`
+- `Origin`
+- `Host`
+This is exactly why **session-based (cookie) auth works** in browser WebSocket connections, while a manually-set `Authorization` header does not.
+
+### What Companies Actually Use (Practical Guidance)
+ 
+| Scenario | Recommended approach |
+|---|---|
+| Django web app | Cookies (session auth) — simplest, built-in |
+| SPA (single page app) (e.g., React + API) | JWT via query param or other workaround, since the `Authorization` header isn't available in-browser |
+| Mobile app | JWT in `Authorization` headers (headers work fine outside the browser) |
+| High-security systems | Short-lived JWTs with a refresh-token flow, possibly combined with cookies |
+
+**Realistic recommendation for "a good web app"**
+For a solid, real-world FastAPI + React setup:
+
+1. **Access token (JWT)** — short-lived (e.g., 15 minutes), kept in memory on the React side, sent via Authorization header for normal API calls.
+2. **Refresh token** — longer-lived, stored in an HttpOnly, Secure, SameSite cookie — used only to silently get a new access token when the old one expires.
+3. **WebSocket connections** — since headers aren't available in websocket in browser, pass the short-lived access token via query parameter at connection time (acceptable specifically because it's short-lived — limiting the exposure window from being logged/visible).
+
+---
+## 19. Cookies vs Tokens: Browsers vs Mobile Apps
+ 
+### Do Cookies Only Work in Browsers?
+ 
+**No.** Cookies work in **any HTTP client** — including mobile apps, backend services, and CLI tools.
+ 
+The real distinction is **automatic handling**:
+- **Browsers** handle cookies automatically: they store `Set-Cookie` responses and automatically attach the right `Cookie` header on every subsequent request — including the WebSocket handshake. Zero developer effort.
+- **Mobile apps** do **not** handle cookies automatically (unless using special libraries). The cookie must be stored and attached manually.
+
+
+# `Set-Cookie` vs `Cookie` Headers
+
+| Header | Sent by | Direction | Purpose |
+|---|---|---|---|
+| **`Set-Cookie`** | Server | Server → Browser (in a response) | Server tells the browser: "store this cookie" |
+| **`Cookie`** | Browser | Browser → Server (in a request) | Browser tells the server: "here's the cookie I'm holding" |
+
+
+### Why Mobile Apps Prefer Tokens
+ 
+Since cookies aren't automatic on mobile, it's simpler to use:
+```
+Authorization: Bearer <JWT>
+```
+This works consistently across HTTP, WebSockets, and general API calls, with no dependency on a cookie system in mobile apps.Unlike browsers, mobile apps **can** freely send custom headers — which is why mobile WebSocket clients can use `Authorization: Bearer <token>` directly, while browser-based WebSocket clients cannot.
+ 
+| | Browser | Mobile app |
+|---|---|---|
+| Cookie handling | Automatic | Manual / requires extra libraries |
+| Custom header support (e.g., `Authorization`) on WebSocket handshake | ❌ Not allowed | ✅ Allowed |
+| Common auth choice in websocket | Cookies, or JWT via query param | JWT in `Authorization` header |
+
+### Can You Send a JWT Inside a Cookie?
+ 
+**Yes, absolutely.** A cookie is just generic key–value storage — it is **not** limited to holding only a `session_id`. The server can set:
+```
+Set-Cookie: access_token=eyJhbGciOiJIUzI1NiIs...; HttpOnly; Secure; SameSite=Lax
+```
+The browser will store it and automatically send it on future requests, including the WebSocket handshake.
+ 
+**Why people assume cookies = session_id only:** In frameworks like Django, the cookie conventionally stores just a `session_id`, while the actual user data lives server-side. That convention is what's called **session-based authentication** — but it's a convention, not a hard limitation of cookies themselves.
+
+
+### Session-in-Cookie vs JWT-in-Cookie
+ 
+| | Session (Django default) | JWT in cookie |
+|---|---|---|
+| Cookie content | `sessionid=abc123` | `access_token=<JWT>` |
+| Server storage | Stores full user data, keyed by session ID | No storage needed — token is self-contained |
+| State | Stateful | Stateless |
+
+### Is Storing a JWT in a Cookie a Problem?
+ 
+Not inherently — many companies do this. But there are trade-offs:
+ 
+- **CSRF risk:** Cookies are sent automatically with every matching request, which means an attacker's site could trigger unwanted requests to your server (Cross-Site Request Forgery).
+- **Less control vs. headers:** With an `Authorization` header, the developer explicitly controls when the token is sent. With cookies, it's sent automatically — sometimes when not wanted.
+
+### Who Can Access an `HttpOnly` Cookie?
+ 
+| Actor | Access? |
+|---|---|
+| JavaScript (frontend, via `document.cookie`) | ❌ No |
+| Browser (automatic sending in requests) | ✅ Yes |
+| Your backend server (e.g., `request.COOKIES.get("access_token")` in Django) | ✅ Yes |
+| Malicious injected JavaScript (XSS attack) | ❌ No |
+| Other websites (cross-site requests, when `SameSite=Strict`) | ❌ No |
+ 
+This is precisely the protection `HttpOnly` and `SameSite` are designed to provide.
+
+---
+## 20. WebSocket Authentication in Django Channels (Token/JWT Flow)
+ 
+### The Problem Being Solved
+ 
+In normal APIs, a token is sent via a header. In WebSockets, headers generally **can't** be used for this (browser limitation) — so authentication needs a different mechanism.
+ 
+**Core idea:** since headers don't work, the **token is sent via the URL's query string**, and the server **manually authenticates** the user from it.
+ 
+### Full Beginner-Level Flow
+ 
+**Step 1 — User logs in (plain HTTP):**
+```
+POST /api/login
+```
+Server checks the username/password and returns:
+```json
+{ "token": "abc123" }
+```
+ 
+**Step 2 — Create the WebSocket connection with the token in the query string:**
+```javascript
+new WebSocket("ws://localhost:8000/?token=abc123");
+```
+ 
+**Step 3 — WebSocket handshake carries the token:**
+```
+GET /?token=abc123
+Upgrade: websocket
+```
+The server receives this as `scope["query_string"]`.
+
+### Custom Middleware (Core Authentication Logic)
+ 
+```python
+from rest_framework.authtoken.models import Token
+from urllib.parse import parse_qs
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+ 
+@database_sync_to_async
+def returnUser(token_string):
+    try:
+        user = Token.objects.get(key=token_string).user
+    except:
+        user = AnonymousUser()
+    return user
+ 
+class TokenAuthMiddleWare:
+    def __init__(self, app):
+        self.app = app
+ 
+    async def __call__(self, scope, receive, send):
+        query_string = scope["query_string"]
+        query_params = query_string.decode()
+        query_dict = parse_qs(query_params)
+        token = query_dict["token"][0]
+        user = await returnUser(token)
+        scope["user"] = user
+        return await self.app(scope, receive, send)
+```
+ 
+This middleware:
+1. Extracts the token from `scope["query_string"]`.
+2. Looks up the user from the token via `Token.objects.get(key=token).user`.
+3. Attaches the result to `scope["user"]`.
+This mirrors exactly what Django normally does for session-based authentication — just adapted for WebSockets.
+ 
+`@database_sync_to_async` is required because Django's ORM is synchronous while Channels is async — this decorator safely runs the blocking DB call without blocking the event loop.
+ 
+### Wiring the Middleware into Routing
+ 
+```python
+application = ProtocolTypeRouter({
+    "websocket": TokenAuthMiddleWare(
+        AllowedHostsOriginValidator(
+            URLRouter(
+                [path("", TokenAuthConsumer.as_asgi())]
+            )
+        )
+    )
+})
+```
+ 
+| Component | Role |
+|---|---|
+| `ProtocolTypeRouter` | Decides HTTP vs WebSocket |
+| `TokenAuthMiddleWare` | Adds authentication (sets `scope["user"]`) |
+| `URLRouter` | Routes WebSocket paths to the correct consumer |
+ 
+Internally, `self.app` in the middleware refers to the wrapped ASGI callable (here, the `URLRouter`), which is why `await self.app(scope, receive, send)` works — it passes control down the chain.
+ 
+### Using the Authenticated User in the Consumer
+ 
+```python
+class TokenAuthConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+        print(self.scope["user"].username)
+```
+ 
+By the time `connect()` runs, `self.scope["user"]` is already populated by the middleware — no extra lookup needed.
+ 
+### Why Not Just Authenticate Inside `connect()`?
+ 
+You *can* technically do manual authentication directly inside `connect()`:
+```python
+async def connect(self):
+    token = ...  # read manually
+    user = validate_token(token)
+```
+But this is **not recommended**. Using middleware instead is better because it's:
+- Reusable across multiple consumers.
+- A clean separation of concerns.
+- Consistent — works the same way for every consumer in the app.
+### Roles: Middleware vs `connect()`
+ 
+| Stage | Responsibility |
+|---|---|
+| **Middleware** | **Authentication** — establishing *who* the user is (`scope["user"] = user`) |
+| **`connect()`** | **Authorization / control** — deciding whether to *allow* the connection |
+ 
+```python
+async def connect(self):
+    if self.scope["user"].is_authenticated:
+        await self.accept()
+    else:
+        await self.close()
+```
+ 
+### Why Not Use the Default `AuthMiddlewareStack`?
+ 
+Django's built-in `AuthMiddlewareStack` is designed for **session + cookie**-based authentication. Since this flow uses **token-based** authentication instead, a **custom middleware** is required.
+ 
+### Why Tokens Are Needed at All
+ 
+In modern architectures — APIs, mobile apps, Single Page Applications (SPAs) — the server is typically **stateless**: it doesn't store "sessions" (server-side memory of who's logged in). A token acts as portable proof of identity that the client presents with each request.
+ 
+### Important Limitation: No Custom Headers in Browser WebSockets
+ 
+```
+headers: { Authorization: "Token abc" }   // ❌ Not possible from a browser WebSocket
+```
+This is a **browser restriction**. That's exactly why the token is sent via **query parameters** instead.
+ 
+### Security Considerations for Token-in-URL
+ 
+⚠️ Putting a token directly in the URL has downsides:
+- It can be **logged** (server access logs).
+- It's **visible in browser history**.
+**Better alternatives:**
+- Use short-lived tokens.
+- Send the token in the first WebSocket message instead of the URL.
+### JWT Variant (No Database Lookup)
+ 
+Instead of querying the database for the token, decode a JWT directly:
+```python
+jwt.decode(token, SECRET_KEY)
+```
+No DB lookup needed — the token itself carries the user's identity.
+ 
+**Summary of this flow:**
+1. WebSockets can't use custom headers (in browsers).
+2. So the token is sent via query parameters.
+3. Custom middleware extracts the token.
+4. Middleware finds the corresponding user.
+5. Middleware stores the user in `scope["user"]`.
+6. The consumer uses that authenticated user for the rest of the connection.
+---
+## 21. Who Handles the WebSocket Handshake, and What Is `scope`?
+ 
+### The Pipeline
+ 
+The handshake is handled by the **ASGI server** (e.g., Daphne or Uvicorn), working together with the **Django Channels ASGI application**.
+ 
+**Django Channels** itself is not a single component — it's the entire pipeline of middleware + routing + consumers that sits behind the ASGI server:
+ 
+```
+ASGI Server
+     ↓
+Channels Application (asgi.py — the entry point of Channels)
+     ↓
+Middleware
+     ↓
+Router
+     ↓
+Consumer
+```
+ 
+### Step-by-Step: From Raw Request to `connect()`
+ 
+**Step 1 — Browser sends the upgrade request:**
+```
+GET /ws/chat/?token=abc123 HTTP/1.1
+Upgrade: websocket
+Connection: Upgrade
+```
+ 
+**Step 2 — The ASGI server receives it and builds a `scope`.**
+ 
+A WSGI server (e.g., Gunicorn) converts a raw HTTP request into a Django request object. Similarly, an ASGI server converts the raw connection into a **`scope`** dictionary — metadata describing the connection, analogous to the `request` object in HTTP:
+ 
+```python
+scope = {
+    "type": "websocket",
+    "path": "/ws/chat/",
+    "query_string": b"token=abc123",
+    "headers": [...],
+}
+```
+ 
+This is exactly where `scope["query_string"]` is set — done by the **ASGI server**, not by your application code.
+ 
+**Step 3 — The scope enters the Channels application** (defined in `asgi.py`):
+```python
+application = ProtocolTypeRouter({
+    "websocket": TokenAuthMiddleware(
+        URLRouter([...])
+    )
+})
+```
+ 
+**Step 4 — Middleware runs first:**
+```python
+scope["user"] = user  # set by TokenAuthMiddleware after reading query_string
+```
+ 
+**Step 5 — `URLRouter` matches the path** (`scope["path"]`) to select the right consumer class, e.g. `ChatConsumer`.
+ 
+**Step 6 — A consumer instance is created:** `ChatConsumer(scope)` — already holding the modified scope (including `scope["user"]`).
+ 
+**Step 7 — `connect()` is called.** At this point, both `scope["query_string"]` and `scope["user"]` already exist and are usable.
+ 
+### Comparison With Django's HTTP Pipeline
+ 
+| HTTP equivalent | WebSocket equivalent |
+|---|---|
+| `request` object | `scope` |
+| middleware | middleware |
+| view | consumer |
+ 
+### Key Insight
+ 
+`scope` is created **only once per connection** and passed through the entire pipeline (middleware → router → consumer) — it isn't recreated for each message.
+
+* WebSocket doesn't really have "requests" in this sense — once connected, you just have a stream of messages
+ 
+### Common Mistake
+ 
+❌ *"`connect()` receives the raw request."*
+✅ It actually receives the **already-processed `scope`** — after middleware has already run.
+ 
+---
+## 22. WebSocket Connection Lifecycle in Django Channels (Detailed)
+ 
+### Identity Is Established Once, Not Per Message
+ 
+The server does **not** re-identify the user for every message. Instead:
+1. The user is identified **once**, during the initial connection.
+2. That identity is stored in the connection's `scope`.
+3. **Every subsequent message on that same connection** belongs to that same user — no re-authentication happens.
+This works because each WebSocket connection maps to exactly **one consumer instance**:
+```
+1 client ↔ 1 consumer instance
+```
+ 
+With multiple users, each gets a completely separate consumer instance and scope:
+```
+User1 → Consumer1 (scope.user = user1)
+User2 → Consumer2 (scope.user = user2)
+```
+ 
+All messages from User1 — msg1, msg2, msg3 — always route to the *same* Consumer1 instance, carrying the *same* `scope.user`.
+ 
+### Full Flow: First Connection, Then Messages
+ 
+**First-time connection:**
+1. Client creates the socket: `new WebSocket("ws://localhost:8000/ws?token=abc")`.
+2. **HTTP handshake** — the browser sends the upgrade request; the ASGI server creates the `scope`. (Technically, this is not a "plain" HTTP handshake — it's specifically a **WebSocket handshake conducted over HTTP**.)
+3. **Middleware** extracts the token, authenticates, and sets `scope["user"]`.
+4. **Routing** — `URLRouter` selects the matching consumer.
+5. **Consumer instance created** — `consumer = ChatConsumer(scope)`.
+6. **`connect()` runs — only once** — `await self.accept()` opens the connection.
+**First message from the user:**
+7. `socket.send("Hello")` triggers `receive()` (or `receive_json()`) on the **same** consumer instance, with the **same** `scope["user"]`.
+ 
+**Subsequent messages:**
+8. Each further `socket.send(...)` call goes straight to `receive()` on the same connection/instance. It does **not** re-run `connect()`, middleware, or routing — that pipeline is **skipped** entirely after the initial handshake.
+ 
+
+* Http handshake looks like this
+  ```
+    GET /ws/chat/ HTTP/1.1
+    Host: example.com
+    Upgrade: websocket
+    Connection: Upgrade
+    Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+    Sec-WebSocket-Version: 13
+  ```
+```
+socket.send()
+   ↓
+ASGI server
+   ↓ (websocket.receive event)
+Channels application
+   ↓
+Directly to the SAME consumer instance
+   ↓
+receive()
+```
+ 
+### When Does `connect()` Run Again?
+ 
+**Only** if the connection is closed **and** the client reconnects — establishing a brand-new connection (and thus a brand-new scope and consumer instance).
+ 
+### How the Server Sends a Response Back
+ 
+```python
+await self.send(text_data="Hi client")
+```
+ 
+Internally, Channels turns this into an ASGI event:
+```python
+await send({
+    "type": "websocket.send",
+    "text": "Hello Client"
+})
+```
+The ASGI server then converts this event into an actual WebSocket frame and sends it over the network.
+ 
+On the browser side, the incoming frame triggers the `onmessage` event with a `MessageEvent` object (a browser-native object — *not* the same as the ASGI `"websocket.send"` event happend in the server):
+```javascript
+socket.onmessage = (event) => {
+  console.log(event.data);
+};
+```
+The browser never sees the raw ASGI event type — it only understands "data arrived," which triggers `onmessage`.The data is 'MessageEvent' object.
+
+### Full Reverse Flow (Server → Client)
+ 
+```
+BACKEND:
+self.send()
+   ↓
+Channels creates "websocket.send" ASGI event
+   ↓
+ASGI server converts it into a WebSocket frame, sent over the network
+-----------------------------------------------------
+FRONTEND:
+Browser receives the frame
+   ↓
+Extracts the data
+   ↓
+Creates a MessageEvent object
+   ↓
+Calls onmessage(event)
+
+```
+### Connection Close
+ 
+1. Either side calls `socket.close()`.
+2. ASGI sends a disconnect event: `{"type": "websocket.disconnect"}`.
+3. Channels calls `async def disconnect(self, code): ...` on the consumer.
+4. The consumer instance is destroyed.
+
+*  Both the client and the server are equally capable of initiating the close, and the cleanup process (disconnect()) needs to happen regardless of who started it from server.
+case-A
+```
+// Frontend code
+socket.close();
+```
+case-B 
+```
+# Backend code (Consumer)
+async def receive(self, text_data):
+    if invalid_token:
+        await self.close(code=4001)  # server decides to close it
+
+```
+
+### Event-to-Method Mapping (Complete Reference)
+ 
+| Frontend action | ASGI event | Consumer method |
+|---|---|---|
+| `new WebSocket()` | `websocket.connect` | `connect()` |
+| `socket.send()` | `websocket.receive` | `receive()` |
+| `socket.close()` | `websocket.disconnect` | `disconnect()` |
+ 
+### Full Lifecycle Diagram
+ 
+```
+FRONTEND:
+new WebSocket()
+   ↓
+HTTP Upgrade Request
+   ↓
+ASGI: create scope, create websocket.connect event
+   ↓
+CHANNELS: middleware (auth) → routing → create consumer instance
+   ↓
+connect() runs
+   ↓
+connection open
+-----------------------------------------------------
+MESSAGES:
+socket.send() → ASGI (websocket.receive) → Channels → receive()
+(repeats many times)
+-----------------------------------------------------
+RESPONSE:
+self.send() → frontend onmessage
+-----------------------------------------------------
+CLOSE:
+socket.close() → ASGI (websocket.disconnect) → disconnect() → instance destroyed
+```
+ 
+### Final Understanding
+ 
+```
+connect()    → runs once
+receive()    → runs many times
+disconnect() → runs once
+```
+ 
+**One-line summary:** WebSocket = connect once → communicate many times → disconnect once.
+
+* Both sides ultimately deal with raw WebSocket frames over the network. But each side wraps those frames in its own local representation — the server uses ASGI events, the browser uses event objects (MessageEvent, etc.) — neither of which travels over the network itself.
+
+**server to browser**
+```
+SERVER SIDE                    NETWORK                    BROWSER SIDE
+ASGI event                                                MessageEvent
+(Python dict)                                              (JS object)
+     ↓                                                          ↑
+     │  ←── these are LOCAL representations, never sent ──→     │
+     ↓                                                          ↑
+  converted to a                                          constructed from
+  WebSocket FRAME    ────────────►  raw bytes  ────────────►   a WebSocket FRAME
+  (bytes on the wire)                                       (bytes on the wire)
+
+```
+**browser to server**
+```
+BROWSER SIDE                   NETWORK                    SERVER SIDE
+MessageEvent / Send
+(JS object/string)                                              
+     │                                                          │
+     ▼                                                          │
+  converted to a                                                │
+  WebSocket FRAME     ───────────►  raw bytes  ───────────►  interpreted by ASGI 
+  (bytes on the wire)                                       as an ASGI event
+                                                            (Python dict)
+```
+ 
+---
+## 23. Browser WebSocket Events Recap (Mapped to Backend)
+ 
+| Browser-side | What it does | Backend equivalent (Django Channels) |
+|---|---|---|
+| `new WebSocket()` | Opens the connection (handshake) | `connect()` |
+| `socket.send()` | Sends a message to the server | `receive()` |
+| `socket.onmessage` | Fires when the server sends data | Triggered by `self.send()` on the backend |
+| `socket.onclose` | Fires when the connection closes | `disconnect()` |
+ 
+```javascript
+const socket = new WebSocket("ws://localhost:8000/ws");
+ 
+socket.onopen = () => {
+  console.log("Connected");
+  socket.send("Hello Server");
+};
+ 
+socket.onmessage = (event) => {
+  console.log("Server says:", event.data);
+};
+ 
+socket.onclose = () => {
+  console.log("Disconnected");
+};
+```
+ 
+**Important rule:** You can only send messages **after** `onopen` has fired.
+ 
+You never call `receive()` manually on the backend — Channels (or FastAPI's loop) triggers it automatically whenever a message arrives.
+
+---
+
+
 
 
 
