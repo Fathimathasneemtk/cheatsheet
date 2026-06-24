@@ -1,0 +1,546 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-python/core/OSI layer" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.1"><title data-rh=true>OSI layer | Cheatsheet</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:image content=https://iotafox.com/cheatsheet/img/docusaurus-social-card.jpg /><meta data-rh=true name=twitter:image content=https://iotafox.com/cheatsheet/img/docusaurus-social-card.jpg /><meta data-rh=true property=og:url content="https://iotafox.com/cheatsheet/docs/python/core/OSI layer"/><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="OSI layer | Cheatsheet"/><meta data-rh=true name=description content="What is the OSI Model?"/><meta data-rh=true property=og:description content="What is the OSI Model?"/><link data-rh=true rel=icon href=/cheatsheet/img/favicon.ico /><link data-rh=true rel=canonical href="https://iotafox.com/cheatsheet/docs/python/core/OSI layer"/><link data-rh=true rel=alternate href="https://iotafox.com/cheatsheet/docs/python/core/OSI layer" hreflang=en /><link data-rh=true rel=alternate href="https://iotafox.com/cheatsheet/docs/python/core/OSI layer" hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://iotafox.com/cheatsheet/docs/python/core/OSI layer","name":"OSI layer","position":1}]}</script><link rel=stylesheet href=/cheatsheet/assets/css/styles.b793b561.css /><script src=/cheatsheet/assets/js/runtime~main.88d96d5c.js defer></script><script src=/cheatsheet/assets/js/main.33cca609.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-169")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/cheatsheet/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_fXgn href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/cheatsheet/><div class=navbar__logo><img src=/cheatsheet/img/logo.svg alt="Cheatsheet Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"/><img src=/cheatsheet/img/logo.svg alt="Cheatsheet Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"/></div><b class="navbar__title text--truncate">Cheatsheet</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/cheatsheet/docs/intro>Docs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/JoshBot-Debug/cheatsheet target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPIU><use href=#theme-svg-external-link /></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_Bca1><div class="navbar__search searchBarContainer_NW3z" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_YFbd" value="" /><div class="loadingRing_RJI3 searchBarLoadingRing_YnHq"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class=docsWrapper_hBAB><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type=button></button><div class=docRoot_UBD9><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class=sidebarViewport_aRkj><div class=sidebar_njMd><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/cheatsheet/docs/intro><span title=Cheatsheet class=linkLabel_WmDU>Cheatsheet</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_byQd menu__link menu__link--sublist" href=/cheatsheet/docs/category/c><span title=C++ class=categoryLinkLabel_W154>C++</span></a><button aria-label="Expand sidebar category 'C++'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_byQd menu__link menu__link--sublist" href=/cheatsheet/docs/category/web><span title=Web class=categoryLinkLabel_W154>Web</span></a><button aria-label="Expand sidebar category 'Web'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href="/cheatsheet/docs/python/core/Python internals"><span title=python class=categoryLinkLabel_W154>python</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href="/cheatsheet/docs/python/core/Python internals"><span title=core class=categoryLinkLabel_W154>core</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Python internals"><span title="Python internals" class=linkLabel_WmDU>Python internals</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Memory management"><span title="Memory management" class=linkLabel_WmDU>Memory management</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Mutable VS immutable"><span title="Mutable VS immutable" class=linkLabel_WmDU>Mutable VS immutable</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Function internals"><span title="Function internal" class=linkLabel_WmDU>Function internal</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/Decorators><span title=Decorators class=linkLabel_WmDU>Decorators</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Generators pipeline"><span title="Generators pipeline" class=linkLabel_WmDU>Generators pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Context Manager"><span title="Context Manager in Python" class=linkLabel_WmDU>Context Manager in Python</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/OOPs><span title=OOPs class=linkLabel_WmDU>OOPs</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Dataclasses and Slots"><span title="Dataclasses and Slots" class=linkLabel_WmDU>Dataclasses and Slots</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Exception handling"><span title="Exception handling" class=linkLabel_WmDU>Exception handling</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/GIL><span title=GIL class=linkLabel_WmDU>GIL</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/Multi-threading><span title=Multi-threading class=linkLabel_WmDU>Multi-threading</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/Multi-processing><span title=Multi-processing class=linkLabel_WmDU>Multi-processing</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Asynchronous function"><span title="Asynchronous function" class=linkLabel_WmDU>Asynchronous function</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href="/cheatsheet/docs/python/core/Event loop"><span title="Event loop" class=linkLabel_WmDU>Event loop</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href="/cheatsheet/docs/python/core/OSI layer"><span title="OSI layer" class=linkLabel_WmDU>OSI layer</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/WebRTC><span title=WebRTC class=linkLabel_WmDU>WebRTC</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/cheatsheet/docs/python/core/Websocket><span title=Websocket class=linkLabel_WmDU>Websocket</span></a></ul></ul></ul></nav></div></div></aside><main class=docMainContainer_TBSr><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_VOVn"><div class=docItemContainer_Djhp><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/cheatsheet/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_YNFT><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>python</span><li class=breadcrumbs__item><span class=breadcrumbs__link>core</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>OSI layer</span></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type=button class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>OSI layer</h1></header><h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-is-the-osi-model>What is the OSI Model?<a href=#what-is-the-osi-model class=hash-link aria-label="Direct link to What is the OSI Model?" title="Direct link to What is the OSI Model?" translate=no>​</a></h2>
+<p>The <strong>OSI Model</strong> (Open Systems Interconnection Model) is a conceptual framework used to understand how different networking systems communicate over a network.</p>
+<p>Think of it as a <strong>7-layer structure</strong>, where each layer has a specific job in sending data from one device to another.</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=prerequisite-knowledge>Prerequisite Knowledge<a href=#prerequisite-knowledge class=hash-link aria-label="Direct link to Prerequisite Knowledge" title="Direct link to Prerequisite Knowledge" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-is-a-network>What is a Network?<a href=#what-is-a-network class=hash-link aria-label="Direct link to What is a Network?" title="Direct link to What is a Network?" translate=no>​</a></h3>
+<p>A <strong>network</strong> = a group of devices connected together.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li class="">Your phone + laptop + router</li>
+<li class="">Office computers</li>
+<li class="">The entire internet</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-is-a-local-network-lan>What is a Local Network (LAN)?<a href=#what-is-a-local-network-lan class=hash-link aria-label="Direct link to What is a Local Network (LAN)?" title="Direct link to What is a Local Network (LAN)?" translate=no>​</a></h3>
+<p>A <strong>Local Network</strong> is a small network in one place. All devices connected to the same router are part of one local network.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li class="">Your home Wi-Fi</li>
+<li class="">Office network</li>
+<li class="">College lab network
+<strong>Key features of a Local Network:</strong></li>
+<li class="">Devices can talk to each other directly</li>
+<li class="">Uses:<!-- -->
+<ul>
+<li class="">MAC address</li>
+<li class="">Local IP (e.g., <code>192.168.x.x</code>)</li>
+</ul>
+</li>
+<li class="">Controlled by a router</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-is-the-internet>What is the Internet?<a href=#what-is-the-internet class=hash-link aria-label="Direct link to What is the Internet?" title="Direct link to What is the Internet?" translate=no>​</a></h3>
+<p>The <strong>Internet</strong> = a network of networks — a global network connecting many local networks together.</p>
+<p>It connects:</p>
+<ul>
+<li class="">Your home network</li>
+<li class="">Other homes</li>
+<li class="">Data centers (e.g., Google, Facebook servers)</li>
+</ul>
+<p>Everything is connected globally.</p>
+<p><strong>Local Network vs. Internet</strong></p>
+<table><thead><tr><th>Local Network<th>Internet<tbody><tr><td>Small (home/office)<td>Global<tr><td>Direct communication<td>Through many routers<tr><td>Uses MAC + local IP<td>Uses public IP<tr><td>Controlled by router<td>No single owner</table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=mac-address>MAC address<a href=#mac-address class=hash-link aria-label="Direct link to MAC address" title="Direct link to MAC address" translate=no>​</a></h3>
+<ul>
+<li class="">The MAC address (Media Access Control address) is a unique identifier burned into a device's network hardware — like the network card in your laptop or phone</li>
+<li class="">It's a hardware identity, not a network identity. Every network-capable device (laptop, phone, router, printer) has one assigned by its manufacturer.</li>
+<li class="">In theory: every device in the world has a globally unique MAC address.</li>
+<li class="">In practice: what actually matters for communication is uniqueness within your local network.</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=the-7-layers-of-the-osi-model-top--bottom>The 7 Layers of the OSI Model (Top → Bottom)<a href=#the-7-layers-of-the-osi-model-top--bottom class=hash-link aria-label="Direct link to The 7 Layers of the OSI Model (Top → Bottom)" title="Direct link to The 7 Layers of the OSI Model (Top → Bottom)" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=7-application-layer>7. Application Layer<a href=#7-application-layer class=hash-link aria-label="Direct link to 7. Application Layer" title="Direct link to 7. Application Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Closest to the user</li>
+<li class="">Provides network services to applications</li>
+<li class="">Examples: web browsers, email apps</li>
+<li class="">Protocols: <strong>HTTP, FTP, SMTP</strong>
+👉 <strong>Example:</strong> When you open a website, this layer handles that request.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=6-presentation-layer>6. Presentation Layer<a href=#6-presentation-layer class=hash-link aria-label="Direct link to 6. Presentation Layer" title="Direct link to 6. Presentation Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Responsible for data format, encryption, and compression</li>
+<li class="">Converts data into a readable format
+👉 <strong>Example:</strong> Converts data into JSON, encrypts it using SSL.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=5-session-layer>5. Session Layer<a href=#5-session-layer class=hash-link aria-label="Direct link to 5. Session Layer" title="Direct link to 5. Session Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Manages sessions (connections) between devices</li>
+<li class="">Starts, maintains, and ends communication
+👉 <strong>Example:</strong> Keeps your login session active on a website.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=4-transport-layer>4. Transport Layer<a href=#4-transport-layer class=hash-link aria-label="Direct link to 4. Transport Layer" title="Direct link to 4. Transport Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Ensures reliable data transfer</li>
+<li class="">Handles error detection and flow control</li>
+<li class="">Protocols: <strong>TCP, UDP</strong>
+👉 <strong>Example:</strong> TCP ensures all packets arrive correctly.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=3-network-layer>3. Network Layer<a href=#3-network-layer class=hash-link aria-label="Direct link to 3. Network Layer" title="Direct link to 3. Network Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Handles routing (path selection)</li>
+<li class="">Uses IP addresses to find the destination</li>
+</ul>
+<p>👉 <strong>Example:</strong> Decides how your data travels across the internet.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=2-data-link-layer>2. Data Link Layer<a href=#2-data-link-layer class=hash-link aria-label="Direct link to 2. Data Link Layer" title="Direct link to 2. Data Link Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Responsible for node-to-node delivery</li>
+<li class="">Performs error detection at the MAC address level
+👉 <strong>Example:</strong> Communication between two devices in the same network (like Wi-Fi).</li>
+</ul>
+<blockquote>
+<p>Data doesn't travel directly from you to a destination (e.g., Google) in one step. It goes step by step, hop by hop — and each step is an example of node-to-node delivery.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=1-physical-layer>1. Physical Layer<a href=#1-physical-layer class=hash-link aria-label="Direct link to 1. Physical Layer" title="Direct link to 1. Physical Layer" translate=no>​</a></h3>
+<ul>
+<li class="">Deals with hardware and signals</li>
+<li class="">Transmits raw bits (0s and 1s)
+👉 <strong>Example:</strong> Cables, switches, electrical signals.</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=simple-real-life-example-sending-a-whatsapp-message--imp>Simple Real-Life Example: Sending a WhatsApp Message -IMP<a href=#simple-real-life-example-sending-a-whatsapp-message--imp class=hash-link aria-label="Direct link to Simple Real-Life Example: Sending a WhatsApp Message -IMP" title="Direct link to Simple Real-Life Example: Sending a WhatsApp Message -IMP" translate=no>​</a></h2>
+<table><thead><tr><th>Layer<th>Action<tbody><tr><td>Application<td>You type the message<tr><td>Presentation<td>Message gets encrypted<tr><td>Session<td>Connection is maintained<tr><td>Transport<td>Message is split into packets<tr><td>Network<td>Finds the route<tr><td>Data Link<td>Sent within the local network<tr><td>Physical<td>Sent as electrical signals</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=tracing-a-login-request-through-the-osi-layers>Tracing a Login Request Through the OSI Layers<a href=#tracing-a-login-request-through-the-osi-layers class=hash-link aria-label="Direct link to Tracing a Login Request Through the OSI Layers" title="Direct link to Tracing a Login Request Through the OSI Layers" translate=no>​</a></h2>
+<p>This section walks through what really happens, layer by layer, when you submit a login form (e.g., on a Django-based website) — from your device, across the internet, to the server, and back.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-1-you-enter-login-details--application-layer-7>Step 1: You Enter Login Details — Application Layer (7)<a href=#step-1-you-enter-login-details--application-layer-7 class=hash-link aria-label="Direct link to Step 1: You Enter Login Details — Application Layer (7)" title="Direct link to Step 1: You Enter Login Details — Application Layer (7)" translate=no>​</a></h3>
+<ul>
+<li class="">You type your username & password and click <strong>Login</strong></li>
+<li class="">The browser/app creates a request (usually HTTP/HTTPS)</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-2-data-formatting--security--presentation-layer-6>Step 2: Data Formatting & Security — Presentation Layer (6)<a href=#step-2-data-formatting--security--presentation-layer-6 class=hash-link aria-label="Direct link to Step 2: Data Formatting & Security — Presentation Layer (6)" title="Direct link to Step 2: Data Formatting & Security — Presentation Layer (6)" translate=no>​</a></h3>
+<ul>
+<li class="">The data is:<!-- -->
+<ul>
+<li class="">Encrypted (HTTPS → SSL/TLS)</li>
+<li class="">Formatted (JSON / form data)</li>
+</ul>
+</li>
+</ul>
+<p>👉 Your password is not sent as plain text.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-3-session-handling--session-layer-5>Step 3: Session Handling — Session Layer (5)<a href=#step-3-session-handling--session-layer-5 class=hash-link aria-label="Direct link to Step 3: Session Handling — Session Layer (5)" title="Direct link to Step 3: Session Handling — Session Layer (5)" translate=no>​</a></h3>
+<ul>
+<li class="">A session is created or reused</li>
+<li class="">Maintains the connection between client and server
+👉 <strong>Example:</strong> Keeps track of your login request session.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-4-breaking-data-into-packets--transport-layer-4>Step 4: Breaking Data into Packets — Transport Layer (4)<a href=#step-4-breaking-data-into-packets--transport-layer-4 class=hash-link aria-label="Direct link to Step 4: Breaking Data into Packets — Transport Layer (4)" title="Direct link to Step 4: Breaking Data into Packets — Transport Layer (4)" translate=no>​</a></h3>
+<ul>
+<li class="">Uses TCP (reliable)</li>
+<li class="">Splits data into packets</li>
+<li class="">Adds:<!-- -->
+<ul>
+<li class="">Port number (e.g., 443 for HTTPS)</li>
+<li class="">Sequence numbers
+👉 Ensures all packets reach correctly.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Sequnce numbers</strong></p>
+<ul>
+<li class="">
+<p>When TCP splits your data (say, a login request) into multiple packets, each packet doesn't just carry a chunk of your data — it carries a TCP sequence number in its header. Here's what that actually means:</p>
+</li>
+<li class="">
+<p>It's a byte counter, not a packet counter. TCP doesn't number packets 1, 2, 3... Instead, it numbers the bytes of data. So if your first packet carries bytes 0–999 of your message, its sequence number is 0 (or some random starting value + 0). The next packet, carrying bytes 1000–1999, gets sequence number 1000. And so on.</p>
+</li>
+<li class="">
+<p>Why bytes and not packets? Because packets can arrive out of order, get duplicated, or get dropped on the internet. A byte-based sequence number lets the receiving side know exactly where each chunk fits into the original message, no matter what order the packets actually arrive in.</p>
+</li>
+<li class="">
+<p>What it's used for on the receiving end:</p>
+<ul>
+<li class="">Reordering — if packet 3 arrives before packet 2, the receiver uses sequence numbers to put the data back in the correct order before handing it to the application.</li>
+<li class="">Detecting loss — if the receiver sees sequence numbers 0, 1000, then jumps to 3000, it knows the packet covering 2000–2999 is missing and can ask for it to be resent.</li>
+<li class="">Acknowledgment — the receiver sends back an ACK (acknowledgment) referencing the sequence number, confirming "I received up to byte X." This is how TCP guarantees reliable delivery.</li>
+</ul>
+</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-5-routing--network-layer-3>Step 5: Routing — Network Layer (3)<a href=#step-5-routing--network-layer-3 class=hash-link aria-label="Direct link to Step 5: Routing — Network Layer (3)" title="Direct link to Step 5: Routing — Network Layer (3)" translate=no>​</a></h3>
+<ul>
+<li class="">Adds:<!-- -->
+<ul>
+<li class="">Source IP (your device — your laptop)</li>
+<li class="">Destination IP (server)</li>
+</ul>
+</li>
+<li class="">Finds the best path to the server
+👉 Like Google Maps for data.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-6-local-delivery--data-link-layer-2>Step 6: Local Delivery — Data Link Layer (2)<a href=#step-6-local-delivery--data-link-layer-2 class=hash-link aria-label="Direct link to Step 6: Local Delivery — Data Link Layer (2)" title="Direct link to Step 6: Local Delivery — Data Link Layer (2)" translate=no>​</a></h3>
+<ul>
+<li class="">Adds the MAC address</li>
+<li class="">Handles communication inside the same local network (Wi-Fi/router)</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-7-physical-transmission--physical-layer-1>Step 7: Physical Transmission — Physical Layer (1)<a href=#step-7-physical-transmission--physical-layer-1 class=hash-link aria-label="Direct link to Step 7: Physical Transmission — Physical Layer (1)" title="Direct link to Step 7: Physical Transmission — Physical Layer (1)" translate=no>​</a></h3>
+<ul>
+<li class="">Converts data into electrical signals / radio waves</li>
+<li class="">Sends it through cable/Wi-Fi</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=the-reverse-happens-on-the-server-side>The Reverse Happens on the Server Side<a href=#the-reverse-happens-on-the-server-side class=hash-link aria-label="Direct link to The Reverse Happens on the Server Side" title="Direct link to The Reverse Happens on the Server Side" translate=no>​</a></h3>
+<p>The server receives the signal and travels back up: <strong>Physical → ... → Application</strong>.</p>
+<p>At the Application Layer, the server:</p>
+<ul>
+<li class="">Reads the request</li>
+<li class="">Verifies the username & password (database check)</li>
+<li class="">Sends a response back down through the layers to you</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=full-flow-in-one-line>Full Flow in One Line<a href=#full-flow-in-one-line class=hash-link aria-label="Direct link to Full Flow in One Line" title="Direct link to Full Flow in One Line" translate=no>​</a></h3>
+<blockquote>
+<p>Input → HTTP Request → Encryption → Session → TCP Packets → IP Routing → MAC Delivery → Signals → Server → Validate → Response back</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=real-backend-mapping-django-example>Real Backend Mapping (Django Example)<a href=#real-backend-mapping-django-example class=hash-link aria-label="Direct link to Real Backend Mapping (Django Example)" title="Direct link to Real Backend Mapping (Django Example)" translate=no>​</a></h3>
+<table><thead><tr><th>OSI Layer<th>Real-World Component<tbody><tr><td>Application<td>Django view (<code>/login</code>)<tr><td>Presentation<td>HTTPS (SSL/TLS handled by Nginx)<tr><td>Session<td>Django session / JWT<tr><td>Transport<td>TCP<tr><td>Network<td>IP routing (internet)<tr><td>Data Link<td>MAC (local delivery)<tr><td>Physical<td>Electrical signals / radio waves<tr><td>—<td>Response → Cookie or token</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=reality-vs-theory-the-session-layer>Reality vs. Theory: The Session Layer<a href=#reality-vs-theory-the-session-layer class=hash-link aria-label="Direct link to Reality vs. Theory: The Session Layer" title="Direct link to Reality vs. Theory: The Session Layer" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=in-theory-osi-model>In Theory (OSI Model)<a href=#in-theory-osi-model class=hash-link aria-label="Direct link to In Theory (OSI Model)" title="Direct link to In Theory (OSI Model)" translate=no>​</a></h3>
+<p>The <strong>Session Layer</strong> is said to:</p>
+<ul>
+<li class="">Start the session</li>
+<li class="">Maintain the session</li>
+<li class="">End the session
+👉 This sounds like "connection management," which can be confusing, because in practice this job is split across two different real components.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=in-reality-what-actually-happens>In Reality (What Actually Happens)<a href=#in-reality-what-actually-happens class=hash-link aria-label="Direct link to In Reality (What Actually Happens)" title="Direct link to In Reality (What Actually Happens)" translate=no>​</a></h3>
+<p><strong>✅ Connection management is handled by the Transport Layer (TCP):</strong></p>
+<ul>
+<li class="">Keeps the connection alive</li>
+<li class="">Handles:<!-- -->
+<ul>
+<li class="">Packet order</li>
+<li class="">Retransmission</li>
+<li class="">Reliability
+👉 This is the real "connection manager."</li>
+</ul>
+</li>
+</ul>
+<p><strong>✅ User session tracking is handled by the Application Layer (e.g., Django / backend):</strong></p>
+<ul>
+<li class="">Stores login info</li>
+<li class="">Uses cookies / session ID
+👉 This is user identity tracking, not connection management.</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=ip-address-vs-mac-address>IP Address vs. MAC Address<a href=#ip-address-vs-mac-address class=hash-link aria-label="Direct link to IP Address vs. MAC Address" title="Direct link to IP Address vs. MAC Address" translate=no>​</a></h2>
+<p>Each device in a local network has <strong>both</strong>:</p>
+<ul>
+<li class="">A <strong>MAC address</strong> (hardware identity)</li>
+<li class="">An <strong>IP address</strong> (private IP — network identity)
+👉 You use the IP address to communicate, but the MAC address is used internally to actually deliver the data.</li>
+</ul>
+<blockquote>
+<p><strong>MAC</strong> = Media Access Control address</p>
+</blockquote>
+<table><thead><tr><th>Property<th>IP Address<th>MAC Address<tbody><tr><td>Type<td>Logical address (assigned by router/network)<td>Physical address (assigned by hardware)<tr><td>Used for<td>Internet routing<td>Local delivery<tr><td>Behavior across hops<td>Stays the same (end-to-end)<td>Changes at each hop<tr><td>Uniqueness<td>Unique per device ✅ (but may be shared publicly via NAT ❌)<td>Always unique ✅, not visible outside local network ❌</table>
+<p><strong>Key insight:</strong></p>
+<blockquote>
+<p>IP is for decision (routing). MAC is for delivery (local handoff).</p>
+</blockquote>
+<ul>
+<li class=""><strong>"Behavior across hops"</strong>
+<ul>
+<li class="">Imagine your laptop sending a request to Google's server, passing through your router, then your ISP's router, then a few more routers, before reaching Google.</li>
+<li class=""><strong>IP address — stays the same the whole way:</strong>
+<div class="language-py codeBlockContainer_Ckt0 theme-code-block" style=--prism-color:#393A34;--prism-background-color:#f6f8fa><div class=codeBlockContent_QJqH><pre tabindex=0 class="prism-code language-py codeBlock_bY9V thin-scrollbar" style=color:#393A34;background-color:#f6f8fa><code class=codeBlockLines_e6Vv><div class=token-line style=color:#393A34><span class="token plain">Laptop → Router1 → Router2 → Router3 → Google</span><br/></div><div class=token-line style=color:#393A34><span class="token plain">Source IP</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain"> YOUR_PUBLIC_IP   </span><span class="token punctuation" style=color:#393A34>(</span><span class="token plain">same at every single hop</span><span class="token punctuation" style=color:#393A34>)</span><span class="token plain"></span><br/></div><div class=token-line style=color:#393A34><span class="token plain">Dest IP</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain">   GOOGLE_IP        </span><span class="token punctuation" style=color:#393A34>(</span><span class="token plain">same at every single hop</span><span class="token punctuation" style=color:#393A34>)</span><br/></div></code></pre></div></div>
+<ul>
+<li class="">The IP address is the "final destination label" — it doesn't change no matter how many routers the packet passes through. Every router just reads it to decide where to send it next, but never modifies it.</li>
+</ul>
+</li>
+<li class=""><strong>MAC address — gets replaced at every single hop:</strong>
+<div class="language-py codeBlockContainer_Ckt0 theme-code-block" style=--prism-color:#393A34;--prism-background-color:#f6f8fa><div class=codeBlockContent_QJqH><pre tabindex=0 class="prism-code language-py codeBlock_bY9V thin-scrollbar" style=color:#393A34;background-color:#f6f8fa><code class=codeBlockLines_e6Vv><div class=token-line style=color:#393A34><span class="token plain">Laptop → Router1</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain">        Source MAC </span><span class="token operator" style=color:#393A34>=</span><span class="token plain"> Laptop</span><span class="token string" style=color:#e3116c>'s MAC,  Dest MAC = Router1'</span><span class="token plain">s MAC</span><br/></div><div class=token-line style=color:#393A34><span class="token plain">Router1 → Router2</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain">       Source MAC </span><span class="token operator" style=color:#393A34>=</span><span class="token plain"> Router1</span><span class="token string" style=color:#e3116c>'s MAC,  Dest MAC = Router2'</span><span class="token plain">s MAC</span><br/></div><div class=token-line style=color:#393A34><span class="token plain">Router2 → Router3</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain">       Source MAC </span><span class="token operator" style=color:#393A34>=</span><span class="token plain"> Router2</span><span class="token string" style=color:#e3116c>'s MAC,  Dest MAC = Router3'</span><span class="token plain">s MAC</span><br/></div><div class=token-line style=color:#393A34><span class="token plain">Router3 → Google server</span><span class="token punctuation" style=color:#393A34>:</span><span class="token plain"> Source MAC </span><span class="token operator" style=color:#393A34>=</span><span class="token plain"> Router3</span><span class="token string" style=color:#e3116c>'s MAC,  Dest MAC = Google server'</span><span class="token plain">s MAC</span><br/></div></code></pre></div></div>
+<ul>
+<li class="">This is exactly what you read earlier in your notes: each router strips off the old frame (old MAC addresses) and builds a brand-new frame with new MAC addresses before forwarding to the next hop. MAC addresses only ever describe "the next physical neighbor," never the true original sender or true final destination — that's the IP address's job.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class=""><strong>"Uniqueness"</strong>
+<ul>
+<li class=""><strong>IP address: "Unique per device ✅ (but may be shared publicly via NAT ❌)"</strong>
+<ul>
+<li class="">Inside your home network, your laptop, phone, and TV each get their own unique private IP (192.168.1.10, 192.168.1.11, etc.) — so far, unique per device, like it should be.</li>
+<li class="">BUT once they all go out to the internet, NAT makes them share one single public IP (your router's IP). So from the internet's point of view, your laptop and your phone look like they have the same IP address.</li>
+<li class="">That's the "❌" — uniqueness breaks down once you go outside the local network, because multiple real devices end up hiding behind one shared public IP.</li>
+</ul>
+</li>
+<li class=""><strong>MAC address: "Always unique ✅, not visible outside local network ❌"</strong>
+<ul>
+<li class="">The MAC address itself stays truly unique — no sharing, no NAT-style collapsing of multiple devices into one MAC. Your laptop's MAC is always just your laptop's MAC. That's the "✅."</li>
+<li class="">BUT the catch is different: it's not that MAC addresses become non-unique — it's that they never even leave your local network in the first place. The moment your data crosses your router, your MAC address gets stripped off and replaced (as shown above). So nobody outside your local network ever even sees your real MAC address to begin with. That's the "❌" — not a uniqueness problem, but a visibility problem.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=why-the-data-link-layer-is-needed>Why the Data Link Layer Is Needed<a href=#why-the-data-link-layer-is-needed class=hash-link aria-label="Direct link to Why the Data Link Layer Is Needed" title="Direct link to Why the Data Link Layer Is Needed" translate=no>​</a></h2>
+<p><strong>The problem:</strong> Your laptop wants to send data to the internet, but you cannot directly reach every IP on the internet — the internet is made of many networks connected together. Your device is only directly connected to your local network (Wi-Fi/router), so it does <strong>not</strong> directly know the destination server's MAC address.</p>
+<p><strong>What actually happens:</strong></p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-1-find-the-next-hop-router>Step 1: Find the Next Hop (Router)<a href=#step-1-find-the-next-hop-router class=hash-link aria-label="Direct link to Step 1: Find the Next Hop (Router)" title="Direct link to Step 1: Find the Next Hop (Router)" translate=no>​</a></h3>
+<p>Your laptop decides: <em>"I need to send this to my router first."</em></p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-2-arp-address-resolution-protocol>Step 2: ARP (Address Resolution Protocol)<a href=#step-2-arp-address-resolution-protocol class=hash-link aria-label="Direct link to Step 2: ARP (Address Resolution Protocol)" title="Direct link to Step 2: ARP (Address Resolution Protocol)" translate=no>​</a></h3>
+<p>Your device already knows it's router's IP (the <strong>default gateway</strong>), but not its MAC address:</p>
+<ul>
+<li class="">Laptop asks: <em>"Who has this IP (router IP)? Give me your MAC address."</em></li>
+<li class="">Router replies: <em>"Here is my MAC address."</em></li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-3-frame-creation>Step 3: Frame Creation<a href=#step-3-frame-creation class=hash-link aria-label="Direct link to Step 3: Frame Creation" title="Direct link to Step 3: Frame Creation" translate=no>​</a></h3>
+<p>The Data Link Layer creates a <strong>frame</strong>, adding:</p>
+<ul>
+<li class="">Source MAC → your laptop</li>
+<li class="">Destination MAC → router</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-4-send-within-the-local-network>Step 4: Send Within the Local Network<a href=#step-4-send-within-the-local-network class=hash-link aria-label="Direct link to Step 4: Send Within the Local Network" title="Direct link to Step 4: Send Within the Local Network" translate=no>​</a></h3>
+<p>The frame is sent over Wi-Fi to the router. This is the Data Link Layer's job.</p>
+<ul>
+<li class="">None of this involves the internet yet. ARP, in particular, only ever works locally — it can't ask "who has this IP" across the internet, only within the same local network.</li>
+<li class="">The <strong>default gateway</strong> is just a technical name for your <strong>router's local IP</strong> address.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-happens-inside-the-router>What Happens Inside the Router.<a href=#what-happens-inside-the-router class=hash-link aria-label="Direct link to What Happens Inside the Router." title="Direct link to What Happens Inside the Router." translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-1-router-receives-the-packet>Step 1: Router Receives the Packet<a href=#step-1-router-receives-the-packet class=hash-link aria-label="Direct link to Step 1: Router Receives the Packet" title="Direct link to Step 1: Router Receives the Packet" translate=no>​</a></h3>
+<p>It looks at the destination IP.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=step-2-router-checks-its-routing-table>Step 2: Router Checks Its Routing Table<a href=#step-2-router-checks-its-routing-table class=hash-link aria-label="Direct link to Step 2: Router Checks Its Routing Table" title="Direct link to Step 2: Router Checks Its Routing Table" translate=no>​</a></h3>
+<p>It asks: <em>"Do I know this network directly?"</em></p>
+<p><strong>Case 1 — ✅ The destination IP is in the router's local network:</strong></p>
+<ul>
+<li class="">Router says: <em>"This is my network."</em></li>
+<li class="">Sends the data directly using the MAC address.
+<strong>Case 2 — ❌ The destination IP is NOT in the local network (the typical case):</strong></li>
+<li class="">Router says: <em>"I don't know this directly → send to the next router."</em></li>
+<li class="">It uses its <strong>default route</strong>: <em>"If I don't know the destination, send everything to the ISP."</em></li>
+</ul>
+<ul>
+<li class="">default route's action is: "if I don't recognize the destination, send it to my ISP.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=full-flow-inside-the-router>Full Flow Inside the Router<a href=#full-flow-inside-the-router class=hash-link aria-label="Direct link to Full Flow Inside the Router" title="Direct link to Full Flow Inside the Router" translate=no>​</a></h3>
+<ol>
+<li class=""><strong>Routing decision</strong> (Network Layer): Check the routing table using the destination IP.</li>
+<li class=""><strong>Forwarding</strong> (Data Link Layer): Create a new frame using MAC addresses.<!-- -->
+<ul>
+<li class="">Destination MAC → next router's MAC address (e.g., ISP router)</li>
+<li class="">Source MAC → current router</li>
+</ul>
+</li>
+<li class="">At each router along the path:<!-- -->
+<ul>
+<li class="">Removes the previous frame's MAC addresses ❌</li>
+<li class="">Keeps the IP packet intact ✅</li>
+<li class="">Creates a brand-new frame with new MAC addresses ✅
+<strong>Key takeaway:</strong></li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>Decision = Network Layer (IP). Delivery = Data Link Layer (MAC).</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=why-not-just-use-ip-directly>Why Not Just Use IP Directly?<a href=#why-not-just-use-ip-directly class=hash-link aria-label="Direct link to Why Not Just Use IP Directly?" title="Direct link to Why Not Just Use IP Directly?" translate=no>​</a></h3>
+<p>At the hardware level (Ethernet/Wi-Fi), devices don't understand IP addresses — they only understand MAC addresses. So at every hop, the router:</p>
+<ul>
+<li class="">Looks at the IP address (e.g., the destination server's IP) to decide where to send the data</li>
+<li class="">Sends it to the next hop using that hop's MAC address</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-the-server-actually-sees>What the Server Actually Sees<a href=#what-the-server-actually-sees class=hash-link aria-label="Direct link to What the Server Actually Sees" title="Direct link to What the Server Actually Sees" translate=no>​</a></h2>
+<p>👉 <strong>No</strong> — previous MAC addresses are <strong>not</strong> preserved across the journey. Frames (Data Link Layer) are rebuilt at every hop:</p>
+<ul>
+<li class="">Each router removes the old frame</li>
+<li class="">Keeps the IP packet</li>
+<li class="">Creates a new frame with new MAC addresses
+By the time the request reaches the destination server (e.g., Google):</li>
+</ul>
+<p><strong>Frame (Data Link Layer):</strong></p>
+<ul>
+<li class="">✅ Destination MAC → Server's MAC</li>
+<li class="">✅ Source MAC → Last router's MAC</li>
+<li class="">❌ NOT your laptop's MAC</li>
+<li class="">❌ NOT any intermediate routers' MACs
+<strong>Packet (Network Layer):</strong></li>
+<li class="">✅ Source IP → Your public IP</li>
+<li class="">✅ Destination IP → Server's IP
+<strong>What is NOT included in the IP packet:</strong></li>
+<li class="">❌ Intermediate router IPs</li>
+<li class="">❌ Path history</li>
+<li class="">❌ Any previous hop's IP</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=nat-network-address-translation>NAT (Network Address Translation)<a href=#nat-network-address-translation class=hash-link aria-label="Direct link to NAT (Network Address Translation)" title="Direct link to NAT (Network Address Translation)" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=the-problem>The Problem<a href=#the-problem class=hash-link aria-label="Direct link to The Problem" title="Direct link to The Problem" translate=no>​</a></h3>
+<p>Multiple devices in your home (phone, laptop, TV) all share <strong>one</strong> public IP address from your router/ISP (e.g., Airtel, Jio). Individually:</p>
+<ul>
+<li class="">Laptop ❌ not visible separately on the internet</li>
+<li class="">Phone ❌ not visible separately</li>
+<li class="">TV ❌ not visible separately
+👉 The server only sees the router's single public IP.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=why-this-happens>Why This Happens<a href=#why-this-happens class=hash-link aria-label="Direct link to Why This Happens" title="Direct link to Why This Happens" translate=no>​</a></h3>
+<p>This is due to <strong>NAT (Network Address Translation)</strong>. The router:</p>
+<ul>
+<li class="">Converts private IP → public IP</li>
+<li class="">Keeps track of who sent what</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=how-nat-still-allows-correct-communication>How NAT Still Allows Correct Communication<a href=#how-nat-still-allows-correct-communication class=hash-link aria-label="Direct link to How NAT Still Allows Correct Communication" title="Direct link to How NAT Still Allows Correct Communication" translate=no>​</a></h3>
+<p>Even though all devices share one public IP, the router uses <strong>port numbers</strong> to tell them apart.</p>
+<p><strong>Example — NAT + Port Mapping:</strong></p>
+<table><thead><tr><th>Device<th>Private IP<th>Private Port<th>Mapped to (Public)<tbody><tr><td>Laptop<td>192.168.1.10<td>5001<td>49.x.x.x:5001<tr><td>Phone<td>192.168.1.11<td>5002<td>49.x.x.x:5002</table>
+<p><strong>Request flow:</strong></p>
+<ol>
+<li class="">Laptop sends a request from <code>192.168.1.10:5001</code></li>
+<li class="">Router converts it to its public address before forwarding</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=a-tricky-case-same-private-port-on-different-devices>A Tricky Case: Same Private Port on Different Devices<a href=#a-tricky-case-same-private-port-on-different-devices class=hash-link aria-label="Direct link to A Tricky Case: Same Private Port on Different Devices" title="Direct link to A Tricky Case: Same Private Port on Different Devices" translate=no>​</a></h3>
+<p>What if two devices use the <em>same</em> private port?</p>
+<ul>
+<li class="">Laptop → <code>192.168.1.10:5001</code></li>
+<li class="">Tablet → <code>192.168.1.12:5001</code>
+👉 Same port (5001) on both — how does the router tell them apart?</li>
+</ul>
+<p><strong>First, fix a misunderstanding:</strong> the port inside your local network (the private port) does <strong>not</strong> have to be unique across devices. Multiple devices can use the same private port number.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-nat-actually-does-real-logic>What NAT Actually Does (Real Logic)<a href=#what-nat-actually-does-real-logic class=hash-link aria-label="Direct link to What NAT Actually Does (Real Logic)" title="Direct link to What NAT Actually Does (Real Logic)" translate=no>​</a></h3>
+<p>The router performs <strong>Port Address Translation (PAT)</strong>: it creates its <strong>own</strong> unique mapping for <strong>each connection</strong>, regardless of what private port was used.</p>
+<p><strong>Real NAT Table:</strong></p>
+<table><thead><tr><th>Device<th>Private (IP<!-- -->:Port<!-- -->)<th>Public (IP<!-- -->:Port<!-- -->)<tbody><tr><td>Laptop<td>192.168.1.10:5001<td>49.x.x.x:6001<tr><td>Tablet<td>192.168.1.12:5001<td>49.x.x.x:6002</table>
+<p>👉 Notice: both devices used port <code>5001</code> internally ✅, but the router assigned them <strong>different public ports</strong> ❗</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=response-handling>Response Handling<a href=#response-handling class=hash-link aria-label="Direct link to Response Handling" title="Direct link to Response Handling" translate=no>​</a></h3>
+<p>When the server replies, when response reaches to the router ,that time checks its NAT table:</p>
+<ul>
+<li class=""><code>6001</code> → <code>192.168.1.10:5001</code> -> routes the reply to the Laptop ✅</li>
+<li class=""><code>6002</code> → <code>192.168.1.12:5001</code> ->  routes the reply to the Tablet ✅</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=one-line-memory-aid>One-Line Memory Aid<a href=#one-line-memory-aid class=hash-link aria-label="Direct link to One-Line Memory Aid" title="Direct link to One-Line Memory Aid" translate=no>​</a></h3>
+<blockquote>
+<p>Private ports can clash, public ports cannot.</p>
+</blockquote>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class=admonitionHeading_Gvgb><span class=admonitionIcon_Rf37><svg viewBox="0 0 14 16"><path fill-rule=evenodd d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"/></svg></span>info</div><div class=admonitionContent_BuS1><p><strong>Public port</strong> cannot reliably or persistently tell which specific device sent them, because ports are temporary and assigned per-connection, not per-device.</div></div>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=what-a-server-can-learn-from-your-ip-address>What a Server Can Learn From Your IP Address<a href=#what-a-server-can-learn-from-your-ip-address class=hash-link aria-label="Direct link to What a Server Can Learn From Your IP Address" title="Direct link to What a Server Can Learn From Your IP Address" translate=no>​</a></h2>
+<p>Using your public (source) IP, a server can determine general information:</p>
+<p><strong>🌍 General Info</strong></p>
+<ul>
+<li class="">Country (e.g., India)</li>
+<li class="">City (approximate)</li>
+<li class="">ISP (e.g., Airtel, Jio)
+👉 This is called <strong>IP geolocation</strong>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=important-real-world-case-shared-home-ip>Important Real-World Case: Shared Home IP<a href=#important-real-world-case-shared-home-ip class=hash-link aria-label="Direct link to Important Real-World Case: Shared Home IP" title="Direct link to Important Real-World Case: Shared Home IP" translate=no>​</a></h3>
+<p>In most home networks, your IP is shared across all devices (phone, laptop, TV) via NAT — they all use the same public IP. So the server sees only one shared IP address, not individual devices.</p>
+<table><thead><tr><th><th>Shared or Unique?<tbody><tr><td><strong>Public IP</strong><td><strong>Shared</strong> — all your devices (phone, laptop, TV) go out to the internet using the exact same public IP, because they're all behind the same router<tr><td><strong>Public Port</strong><td><strong>Unique for connection</strong> — for every active connection, the router assigns a different public port, so each device's traffic can be told apart</table>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=q->Q :<a href=#q- class=hash-link aria-label="Direct link to Q :" title="Direct link to Q :" translate=no>​</a></h3>
+<p>if all my devices share one public IP, how does a website still tell my phone apart from my laptop, or tell me apart from someone else on the same network (like at school or office Wi-Fi)?
+<strong>ANS:</strong></p>
+<ul>
+<li class="">Public IP tells the server which network the traffic came from (e.g., "this is someone on this specific home/school/office Wi-Fi")</li>
+<li class="">Public IP + Public Port is the exact pair the router uses internally (via the NAT table) to know which device sent a specific request</li>
+</ul>
+<p>This part is accurate, and it's exactly how NAT works.Not the way the server identifying the user.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=problem>Problem<a href=#problem class=hash-link aria-label="Direct link to Problem" title="Direct link to Problem" translate=no>​</a></h3>
+<p>Where it breaks down for "the server identifying you"
+The problem is: the public port isn't stable or visible to the server in a way that's useful for identification.</p>
+<ol>
+<li class="">The port is temporary, and changes constantly</li>
+</ol>
+<p>Each new connection (or even a refreshed page) gets a new random public port from the router. Your laptop might use port 6001 for one request, then 6034 for the next, then 6102 for the one after that. There's no fixed "this port = this device" rule that persists. So even if the server logged the port for one request, it's useless for the next request — it'll be a different port.
+2. The server is never trying to map ports back to devices — only the router does that</p>
+<p>The NAT table you learned about is internal to your router, used only so replies get sent back to the right device on your local network. The server on the other end never sees or uses this table — it just sees "a request came from 49.x.x.x:6001" and replies to that same address. The server has no way (and no need) to peek inside your home network and go "ah, port 6001 means it was specifically the laptop."</p>
+<ol start=3>
+<li class="">So from the server's point of view, port number ≠ device identity</li>
+</ol>
+<p>The server could technically notice "two different requests came from two different ports under the same IP," and guess "these are probably two different devices/tabs" — but it has no way to know which device is which, or whether it's the same device opening two tabs versus two separate devices. The port alone carries no identity information to the server — it's meaningful only to the router, transiently, for routing replies.</p>
+<p>So to directly answer your question:</p>
+<p>Using IP + port, the server can roughly tell "these requests are probably coming from different connections behind this one IP" — but it cannot reliably or persistently tell which specific device sent them, because ports are temporary and assigned per-connection, not per-device.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=so-how-do-websites-identify-you-specifically>So How Do Websites Identify <em>You</em> Specifically?<a href=#so-how-do-websites-identify-you-specifically class=hash-link aria-label="Direct link to so-how-do-websites-identify-you-specifically" title="Direct link to so-how-do-websites-identify-you-specifically" translate=no>​</a></h3>
+<p>Since IP+Port alone can't distinguish between devices/users behind the same NAT, websites use:</p>
+<ul>
+<li class=""><strong>Cookies</strong> — stored in the browser, used to track sessions/logins</li>
+<li class=""><strong>Login accounts</strong> — username/password</li>
+<li class=""><strong>Device fingerprinting</strong> — browser type, OS, screen size, etc.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=setting-up-scenario-1>Setting up scenario-1<a href=#setting-up-scenario-1 class=hash-link aria-label="Direct link to Setting up scenario-1" title="Direct link to Setting up scenario-1" translate=no>​</a></h3>
+<p>Device 1 (say, your laptop) at office, IP 192.168.1.10
+Device 2 (say, your phone) at office, IP 192.168.1.20
+Both go through the same office router, sharing one public IP (say 49.x.x.x)
+Both log in with the same username/password (let's say it's the same Google account)</p>
+<p><strong>What happens, step by step</strong></p>
+<ol>
+<li class="">Device 1 sends a request</li>
+</ol>
+<p>Goes out as 192.168.1.10:5001
+Router does NAT: assigns public port 6001
+Leaves office as 49.x.x.x:6001
+Router's NAT table: 6001 ↔ Device 1 (192.168.1.10:5001)</p>
+<ol start=2>
+<li class="">Device 2 sends a request (could be at the exact same moment)</li>
+</ol>
+<p>Goes out as 192.168.1.20:5050
+Router does NAT: assigns public port 6002 (a different port — it always picks a free one)
+Leaves office as 49.x.x.x:6002
+Router's NAT table: 6002 ↔ Device 2 (192.168.1.20:5050)</p>
+<ol start=3>
+<li class="">Google's server receives both</li>
+</ol>
+<p>From Google's point of view, it received:</p>
+<p>Request A from 49.x.x.x:6001
+Request B from 49.x.x.x:6002</p>
+<p>Same IP, different ports — Google doesn't know or care these are "two different physical devices" — it just sees two separate connections, full stop.
+4. Google replies to each, individually</p>
+<p>Reply for Request A goes back to 49.x.x.x:6001
+Reply for Request B goes back to 49.x.x.x:6002</p>
+<ol start=5>
+<li class="">Your office router routes each reply correctly</li>
+</ol>
+<p>Sees reply addressed to 6001 → NAT table says that's Device 1 → forwards to 192.168.1.10
+Sees reply addressed to 6002 → NAT table says that's Device 2 → forwards to 192.168.1.20</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id=setting-up-scenario-2>Setting up scenario-2<a href=#setting-up-scenario-2 class=hash-link aria-label="Direct link to Setting up scenario-2" title="Direct link to Setting up scenario-2" translate=no>​</a></h3>
+<p>One device (your laptop), one private IP: 192.168.1.10
+Tab 1: you open Google in one tab
+Tab 2: you open Google in another tab
+Same browser, same device, same private IP</p>
+<p><strong>What happens, step by step</strong></p>
+<ol>
+<li class="">Tab 1 makes a request</li>
+</ol>
+<p>Your OS/browser opens a new connection: 192.168.1.10:5001
+Router does NAT, assigns public port 6001
+Leaves your office as 49.x.x.x:6001
+NAT table: 6001 ↔ 192.168.1.10:5001 (Tab 1's connection)</p>
+<ol start=2>
+<li class="">Tab 2 makes a request (even from the exact same device)</li>
+</ol>
+<p>Your OS picks a different local port for this new connection: 192.168.1.10:5002
+Router does NAT, assigns a different public port: 6002
+Leaves your office as 49.x.x.x:6002
+NAT table: 6002 ↔ 192.168.1.10:5002 (Tab 2's connection)</p>
+<p>The key thing happening here
+Even though it's the same device with the same private IP, your operating system assigns a different local port to every separate connection it opens — whether that's two tabs, two apps, or the same app opening two requests at once. This isn't something NAT or the router invents; it's just how TCP connections work in general: every connection gets its own unique combination of (local IP, local port, destination IP, destination port).
+So:</p>
+<p>Tab 1's connection: 192.168.1.10:5001 → Google
+Tab 2's connection: 192.168.1.10:5002 → Google</p>
+<p>These are two completely separate TCP connections, even though they're from the same device and same browser. Your OS keeps them apart locally, your router keeps them apart via NAT (different public ports), and Google's server keeps them apart as two independent connections too.
+3. Google replies to each separately</p>
+<p>Reply for Tab 1 → goes to 49.x.x.x:6001
+Reply for Tab 2 → goes to 49.x.x.x:6002</p>
+<ol start=4>
+<li class="">Router forwards each reply correctly</li>
+</ol>
+<p>6001 → maps to 192.168.1.10:5001 → delivered to Tab 1's connection
+6002 → maps to 192.168.1.10:5002 → delivered to Tab 2's connection</p>
+<ol start=5>
+<li class="">Your OS delivers each reply to the correct tab</li>
+</ol>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=your-operating-systembrowser-keeps-its-own-internal-table-too--matching-local-port-5001-back-to-tab-1s-connection-and-5002-back-to-tab-2s-connection--so-the-reply-ends-up-rendering-in-the-correct-tab-not-mixed-up>Your operating system/browser keeps its own internal table too — matching local port 5001 back to "Tab 1's connection" and 5002 back to "Tab 2's connection" — so the reply ends up rendering in the correct tab, not mixed up.<a href=#your-operating-systembrowser-keeps-its-own-internal-table-too--matching-local-port-5001-back-to-tab-1s-connection-and-5002-back-to-tab-2s-connection--so-the-reply-ends-up-rendering-in-the-correct-tab-not-mixed-up class=hash-link aria-label='Direct link to Your operating system/browser keeps its own internal table too — matching local port 5001 back to "Tab 1&apos;s connection" and 5002 back to "Tab 2&apos;s connection" — so the reply ends up rendering in the correct tab, not mixed up.' title='Direct link to Your operating system/browser keeps its own internal table too — matching local port 5001 back to "Tab 1&apos;s connection" and 5002 back to "Tab 2&apos;s connection" — so the reply ends up rendering in the correct tab, not mixed up.' translate=no>​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id=frames-and-packets--summary>Frames and Packets — Summary<a href=#frames-and-packets--summary class=hash-link aria-label="Direct link to Frames and Packets — Summary" title="Direct link to Frames and Packets — Summary" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>Frame</strong> (Data Link Layer): the data format used for local delivery. A frame = your data + MAC addresses.</li>
+<li class=""><strong>Packet</strong> (Network Layer): the data format that carries source and destination IP addresses; stays the same end-to-end, while frames are rebuilt at every hop.
+A <strong>Router</strong> is a device that connects a local network to other networks (e.g., the internet) — like a bridge or gate between networks. The Local Network includes the router itself, but the router is the special device inside that network that connects it to the outside world.</li>
+</ul>
+<p><strong>Private IP (Local Network):</strong></p>
+<ul>
+<li class="">Used inside your local network</li>
+<li class="">Not visible on the internet</li>
+<li class="">Each device has a unique private IP and a unique MAC address
+<strong>Public IP (Internet):</strong></li>
+<li class="">Given to your router by your ISP</li>
+<li class="">Used to communicate on the internet</li>
+<li class="">All devices behind the router share this single public IP (via NAT)</li>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/JoshBot-Debug/cheatsheet/blob/main/docs/python/core/16. OSI layer.mdx" target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_Z9Sw aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/cheatsheet/docs/python/core/Event loop"><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Event loop</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/cheatsheet/docs/python/core/WebRTC><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>WebRTC</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-is-the-osi-model class="table-of-contents__link toc-highlight">What is the OSI Model?</a><li><a href=#prerequisite-knowledge class="table-of-contents__link toc-highlight">Prerequisite Knowledge</a><ul><li><a href=#what-is-a-network class="table-of-contents__link toc-highlight">What is a Network?</a><li><a href=#what-is-a-local-network-lan class="table-of-contents__link toc-highlight">What is a Local Network (LAN)?</a><li><a href=#what-is-the-internet class="table-of-contents__link toc-highlight">What is the Internet?</a><li><a href=#mac-address class="table-of-contents__link toc-highlight">MAC address</a></ul><li><a href=#the-7-layers-of-the-osi-model-top--bottom class="table-of-contents__link toc-highlight">The 7 Layers of the OSI Model (Top → Bottom)</a><ul><li><a href=#7-application-layer class="table-of-contents__link toc-highlight">7. Application Layer</a><li><a href=#6-presentation-layer class="table-of-contents__link toc-highlight">6. Presentation Layer</a><li><a href=#5-session-layer class="table-of-contents__link toc-highlight">5. Session Layer</a><li><a href=#4-transport-layer class="table-of-contents__link toc-highlight">4. Transport Layer</a><li><a href=#3-network-layer class="table-of-contents__link toc-highlight">3. Network Layer</a><li><a href=#2-data-link-layer class="table-of-contents__link toc-highlight">2. Data Link Layer</a><li><a href=#1-physical-layer class="table-of-contents__link toc-highlight">1. Physical Layer</a></ul><li><a href=#simple-real-life-example-sending-a-whatsapp-message--imp class="table-of-contents__link toc-highlight">Simple Real-Life Example: Sending a WhatsApp Message -IMP</a><li><a href=#tracing-a-login-request-through-the-osi-layers class="table-of-contents__link toc-highlight">Tracing a Login Request Through the OSI Layers</a><ul><li><a href=#step-1-you-enter-login-details--application-layer-7 class="table-of-contents__link toc-highlight">Step 1: You Enter Login Details — Application Layer (7)</a><li><a href=#step-2-data-formatting--security--presentation-layer-6 class="table-of-contents__link toc-highlight">Step 2: Data Formatting & Security — Presentation Layer (6)</a><li><a href=#step-3-session-handling--session-layer-5 class="table-of-contents__link toc-highlight">Step 3: Session Handling — Session Layer (5)</a><li><a href=#step-4-breaking-data-into-packets--transport-layer-4 class="table-of-contents__link toc-highlight">Step 4: Breaking Data into Packets — Transport Layer (4)</a><li><a href=#step-5-routing--network-layer-3 class="table-of-contents__link toc-highlight">Step 5: Routing — Network Layer (3)</a><li><a href=#step-6-local-delivery--data-link-layer-2 class="table-of-contents__link toc-highlight">Step 6: Local Delivery — Data Link Layer (2)</a><li><a href=#step-7-physical-transmission--physical-layer-1 class="table-of-contents__link toc-highlight">Step 7: Physical Transmission — Physical Layer (1)</a><li><a href=#the-reverse-happens-on-the-server-side class="table-of-contents__link toc-highlight">The Reverse Happens on the Server Side</a><li><a href=#full-flow-in-one-line class="table-of-contents__link toc-highlight">Full Flow in One Line</a><li><a href=#real-backend-mapping-django-example class="table-of-contents__link toc-highlight">Real Backend Mapping (Django Example)</a></ul><li><a href=#reality-vs-theory-the-session-layer class="table-of-contents__link toc-highlight">Reality vs. Theory: The Session Layer</a><ul><li><a href=#in-theory-osi-model class="table-of-contents__link toc-highlight">In Theory (OSI Model)</a><li><a href=#in-reality-what-actually-happens class="table-of-contents__link toc-highlight">In Reality (What Actually Happens)</a></ul><li><a href=#ip-address-vs-mac-address class="table-of-contents__link toc-highlight">IP Address vs. MAC Address</a><li><a href=#why-the-data-link-layer-is-needed class="table-of-contents__link toc-highlight">Why the Data Link Layer Is Needed</a><ul><li><a href=#step-1-find-the-next-hop-router class="table-of-contents__link toc-highlight">Step 1: Find the Next Hop (Router)</a><li><a href=#step-2-arp-address-resolution-protocol class="table-of-contents__link toc-highlight">Step 2: ARP (Address Resolution Protocol)</a><li><a href=#step-3-frame-creation class="table-of-contents__link toc-highlight">Step 3: Frame Creation</a><li><a href=#step-4-send-within-the-local-network class="table-of-contents__link toc-highlight">Step 4: Send Within the Local Network</a></ul><li><a href=#what-happens-inside-the-router class="table-of-contents__link toc-highlight">What Happens Inside the Router.</a><ul><li><a href=#step-1-router-receives-the-packet class="table-of-contents__link toc-highlight">Step 1: Router Receives the Packet</a><li><a href=#step-2-router-checks-its-routing-table class="table-of-contents__link toc-highlight">Step 2: Router Checks Its Routing Table</a><li><a href=#full-flow-inside-the-router class="table-of-contents__link toc-highlight">Full Flow Inside the Router</a><li><a href=#why-not-just-use-ip-directly class="table-of-contents__link toc-highlight">Why Not Just Use IP Directly?</a></ul><li><a href=#what-the-server-actually-sees class="table-of-contents__link toc-highlight">What the Server Actually Sees</a><li><a href=#nat-network-address-translation class="table-of-contents__link toc-highlight">NAT (Network Address Translation)</a><ul><li><a href=#the-problem class="table-of-contents__link toc-highlight">The Problem</a><li><a href=#why-this-happens class="table-of-contents__link toc-highlight">Why This Happens</a><li><a href=#how-nat-still-allows-correct-communication class="table-of-contents__link toc-highlight">How NAT Still Allows Correct Communication</a><li><a href=#a-tricky-case-same-private-port-on-different-devices class="table-of-contents__link toc-highlight">A Tricky Case: Same Private Port on Different Devices</a><li><a href=#what-nat-actually-does-real-logic class="table-of-contents__link toc-highlight">What NAT Actually Does (Real Logic)</a><li><a href=#response-handling class="table-of-contents__link toc-highlight">Response Handling</a><li><a href=#one-line-memory-aid class="table-of-contents__link toc-highlight">One-Line Memory Aid</a></ul><li><a href=#what-a-server-can-learn-from-your-ip-address class="table-of-contents__link toc-highlight">What a Server Can Learn From Your IP Address</a><ul><li><a href=#important-real-world-case-shared-home-ip class="table-of-contents__link toc-highlight">Important Real-World Case: Shared Home IP</a><li><a href=#q- class="table-of-contents__link toc-highlight">Q :</a><li><a href=#problem class="table-of-contents__link toc-highlight">Problem</a><li><a href=#so-how-do-websites-identify-you-specifically class="table-of-contents__link toc-highlight">So How Do Websites Identify <em>You</em> Specifically?</a><li><a href=#setting-up-scenario-1 class="table-of-contents__link toc-highlight">Setting up scenario-1</a><li><a href=#setting-up-scenario-2 class="table-of-contents__link toc-highlight">Setting up scenario-2</a></ul><li><a href=#your-operating-systembrowser-keeps-its-own-internal-table-too--matching-local-port-5001-back-to-tab-1s-connection-and-5002-back-to-tab-2s-connection--so-the-reply-ends-up-rendering-in-the-correct-tab-not-mixed-up class="table-of-contents__link toc-highlight">Your operating system/browser keeps its own internal table too — matching local port 5001 back to "Tab 1's connection" and 5002 back to "Tab 2's connection" — so the reply ends up rendering in the correct tab, not mixed up.</a><li><a href=#frames-and-packets--summary class="table-of-contents__link toc-highlight">Frames and Packets — Summary</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Docs</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/cheatsheet/docs/intro>Cheatsheet</a><li class=footer__item><a class=footer__link-item href=/cheatsheet/docs/category/c>C++</a><li class=footer__item><a class=footer__link-item href=/cheatsheet/docs/category/web>Web</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/JoshBot-Debug/cheatsheet target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPIU><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Joshua Joseph Myers.</div></div></div></footer></div></body>
