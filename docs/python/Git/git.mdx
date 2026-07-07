@@ -1,0 +1,112 @@
+
+## 1-Configure 
+
+`git config --global user.name 'fathima'`
+`git config --global user.email 'fathima@gmail.com'`
+
+* By default git branch is master , but github changed from master to main.
+* git is the version control and github is the hosting of repositories
+
+So change default brach in to main in git also.
+
+`git config --global init.defaultBranch main`
+
+## 2- initialise git
+
+* To initialise local git repository 
+`git init`
+This cretes a hidden .git folder.
+* If the folders and files not moving into staging area , then their color will be different.
+
+### To get status
+`git status`
+
+## 3. Add file
+`git add .` - For adding all files
+`git add index.html` - For adding specific file
+
+## 4. commit 
+`git commit -m 'Initial commit'`
+
+Now the color of the directories and files changes to white.Means nothing to commit.
+
+### To get commits 
+`git log`
+
+## 5.To connect local repo with remote repository.
+
+`git remote add origin git@github.com:fathimathasneeemtk/my-repo.git`
+
+* if we haven't changed default branch as main, then checkout to main branch
+`git branch -M main`
+
+## 6. Push
+
+* first time
+`git push -u origin main`
+* Next time onwards 
+`git push`
+
+## 7.pull
+`git pull`
+
+## 8. .gitignore
+
+* In the .gitignore file adds .env.Now after git push , the .env file won't push.
+
+## 8. add and commit together
+### option 1
+
+`git commit -am 'Added'`
+* -a: automatically stages changes to files that are already tracked by git .then commits them. It does not stage brand-new files that git has never seen before.
+
+### option 2
+`git add index.html && gti commit -m 'Added'`
+
+## 9. fetch 
+
+`git fetch`
+Get latest changes without merging.
+
+## 10.forking
+
+Copy someone's repository into your own account, and then you can use that repo as your repo.
+
+## 11. Create ssh key
+
+* You create an SSH key pair and add the public key to GitHub so you can authenticate securely without typing your username/password every time you push, pull, or clone over SSH
+
+Create ssh key in your system
+`ssh-keygen -t rsa -b 4096`
+* `-t rsa` -> means the type is rsa
+* `-b 4096` → the number of bits for the key (4096-bit key length)
+
+It will give a default location where the key will generate, if you wants to give specific location you can give specific location also.
+Now you can see a private and public key is generated.
+* cat the public key and copy it.Paste that key in github settings-> SSH and GPG keys ->Add ssh key -> copy the key and give a title
+* `ssh -T git@github.com` - you will succesfully authenticated. Is a way to test whether your SSH connection to GitHub is set up correctly.
+  
+## 12.Branching
+* Create a new branch ,name the branch depends on your work
+`git checkout -b feature/login`
+
+* Now you are in feature\login branch .Staging files, Commit and Push (`git push origin feature\login`)
+* Now we have 2 branches, In the github you can see `Compare & pull request` from feature\login branch. Click on the and create a pull request into main branch.
+* Now the owner can check the code.And they can choose need to `Merge the pull request`.Here click on merge and confirm.
+* Now pull request is successfully merged into main and closed.And now you can delete feature\login branch.
+
+* And in terminal checkout into main branch 
+`git checkout main`
+
+* git pull main brach 
+`git pull origin main`
+* locally we still have the brach main and feature\login.
+* Actually before pushing into remote in your local repo, you can merge your `main` branch to `feature\login` branch.And after that we can push into remote repo.And you can delete the feature\login brach.Then we don't wants to pull.
+`git merge feature\login` from main branch.
+`git branch -d feature\login`
+
+## 13.CICD
+
+using Vercel website (Hobby package) and git repo - we can deploy our app.
+
+
