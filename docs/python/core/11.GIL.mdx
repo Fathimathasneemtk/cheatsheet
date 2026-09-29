@@ -140,4 +140,19 @@ Great for
 * API calls
 * network tasks
 * database operations
-  
+
+## Race condition of Python and Database
+* GIL -> Only one thread execute python byte code at a time within a python process,so GIl avoids race condition of python process.
+* But even GIl is there ,the db may get multiple transactions at a time.So the Race condition within db is still there,GIL wont solve that,TO solve this condition we can use Database transcation/lock.
+ ** `transaction.atomic()` in django , it controls multiple db transaction into one atomic transaction. 
+  `atomic() = "these DB operations must succeed/fail together.If fails rollback will happens"'
+** s`elect_for_update()` = "while I'm changing this row, don't let another transaction change/read it in a conflicting way.Locking the db raw."
+```
+GIL
+ ↓
+Protects/constrains Python bytecode execution
+
+Database transaction/lock
+ ↓
+Protects database consistency
+```
