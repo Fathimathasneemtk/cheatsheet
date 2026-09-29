@@ -1,0 +1,1600 @@
+## 1-FastAPI Basics
+Python has support for optional "type hints" (also called "type annotations").
+* These "type hints" or annotations are a special syntax that allows declaring the type of a variable.
+ 
+* By declaring types for your variables, editors and tools can give you better support.
+ 
+### 1. Add Types
+ 
+```py
+def get_full_name(first_name: str, last_name: str):
+    full_name = first_name.title() + " " + last_name.title()
+    return full_name
+ 
+ 
+print(get_full_name("john", "doe"))
+ 
+```
+* We are using colons (:), not equals (=).
+ 
+### Simple types
+* `int`
+* `float`
+* `bool`
+* `bytes`
+ 
+### `typing` module
+For some additional use cases, you might need to import some things from the standard library `typing` module, for example when you want to declare that something has "any type", you can use `Any` from `typing`:
+ 
+```py
+from typing import Any
+ 
+ 
+def some_function(data: Any):
+    print(data)
+ 
+```
+### `Generic` types
+* Some types can take "type parameters" in square brackets, to define their internal types, for example a "list of strings" would be declared `list[str]`.
+* These types that can take type parameters are called **Generic types** or **Generics**.
+* You can use the same builtin types as generics (with square brackets and types inside):
+  * `list`
+  * `tuple`
+  * `set`
+  * `dict`
+ 
+#### List
+ 
+```py
+def process_items(items: list[str]):
+    for item in items:
+        print(item)
+ 
+```
+ 
+#### Tuple and Set
+```py
+def process_items(items_t: tuple[int, int, str], items_s: set[bytes]):
+    return items_t, items_s
+ 
+```
+ 
+This means:
+ 
+* The variable items_t is a tuple with 3 items, an int, another int, and a str.
+* The reason tuple[int, int, str] can specify each position is that tuples are designed to hold a fixed sequence of potentially different types, bcz **`Tuple` has a fixed structure** but `list` not.
+* The variable items_s is a set, and each of its items is of type bytes.
+ 
+```py
+tuple[int, int, str]  → exact structure/positions
+tuple[int, ...]       → any number of ints
+list[int]             → any number of ints
+set[int]              → any number of ints
+ 
+```
+ 
+#### Dict
+To define a `dict`, you pass 2 type parameters, separated by commas.
+* The first type parameter is for the keys of the `dict`.
+* The second type parameter is for the values of the `dict`.
+```py
+def process_items(prices: dict[str, float]):
+    for item_name, item_price in prices.items():
+        print(item_name)
+        print(item_price)
+ 
+```
+#### Union
+You can declare that a variable can be any of several types, for example, an `int` or a `str`.
+```py
+def process_item(item: int | str):
+    print(item)
+```
+This means that `item` could be an `int` or a `str`.
+ 
+#### Possibly `None`
+You can declare that a value could have a type, like str, but that it could also be None
+ 
+```py
+def say_hi(name: str | None = None):
+    if name is not None:
+        print(f"Hey {name}!")
+    else:
+        print("Hello World")
+ 
+```
+ 
+#### Classes as types
+You can also declare a class as the type of a variable.
+```py
+class Person:
+    def __init__(self, name: str):
+        self.name = name
+ 
+ 
+def get_person_name(one_person: Person):
+    return one_person.name
+```
+### 2.Pydantic models
+**Pydantic** is a python library to perform data validation
+* You can declare the type of the data as a classes with attributes.And each attribute has a type.
+* Then you create an instance of that class with some values and it will validate the values, convert them to the appropriate type (if that's the case) and give you an object with all the data.
+* And you get all the editor support with that resulting object.
+ 
+```py
+from datetime import datetime
+ 
+from pydantic import BaseModel
+ 
+ 
+class User(BaseModel):
+    id: int
+    name: str = "John Doe"
+    signup_ts: datetime | None = None
+    friends: list[int] = []
+ 
+ 
+external_data = {
+    "id": "123",
+    "signup_ts": "2017-06-01 12:22",
+    "friends": [1, "2", b"3"],
+}
+user = User(**external_data)
+print(user)
+# > User id=123 name='John Doe' signup_ts=datetime.datetime(2017, 6, 1, 12, 22) friends=[1, 2, 3]
+print(user.id)
+# > 123
+ 
+```
+### 3. Type Hints with Metadata Annotations
+Python also has a feature that allows putting additional metadata in these type hints using `Annotated`.
+ 
+```py
+from typing import Annotated
+ 
+ 
+def say_hello(name: Annotated[str, "this is just metadata"]) -> str:
+    return f"Hello {name}"
+```
+* Python itself doesn't do anything with this Annotated. And for editors and other tools, the type is still str.
+* But you can use this space in Annotated to provide FastAPI with additional metadata about how you want your application to behave.
+* The important thing to remember is that the first type parameter you pass to Annotated is the actual type. The rest, is just metadata for other tools.
+ 
+### 4. Type hints in FastAPI
+**FastAPI** takes advantage of these type hints to do several things.
+* With FastAPI you declare parameters with type hints and you get:
+  * **Editor support**.
+  * **Type checks**.
+... and uses this in Fastapi
+* **Define requirements**: from request path parameters, query parameters, headers, bodies, dependencies, etc.
+* **Convert data**: from the request to the required type.
+* **Validate data**: coming from each request:
+  * Generating **automatic errors** returned to the client when the data is invalid.
+* **Document** the API using OpenAPI
+  * which is then used by the automatic interactive documentation user interfaces.
+
+
+## 2- FastAPI Concurrency
+### 1.Performance optimisation
+ 
+1. If you are using third party libraries that tell you to call them with await, like:
+`results = await some_library()`
+ 
+:::info
+You can only use `await` inside of functions created with `async def`.
+:::
+ 
+2. If you are using a third party library that communicates with something (a database, an API, the file system, etc.) and doesn't have support for using await, (this is currently the case for most database libraries), then declare your path operation functions as normally, with just def, like:
+ 
+```py
+@app.get('/')
+def results():
+    results = some_library()
+    return results
+ 
+```
+3. If your application (somehow) doesn't have to communicate with anything else and wait for it to respond, use `async def`, even if you don't need to use `await` inside.
+ 
+:::info
+**Note**: You can mix def and async def in your path operation functions as much as you need and define each one using the best option for you. FastAPI will do the right thing with them.
+:::
+ 
+* Anyway, in any of the cases above, FastAPI will still work asynchronously and be extremely fast Because the Fastapi application by default it is `async`.But by following the steps above, it will be able to do some performance optimizations.
+ 
+* When FastAPI says:“FastAPI will still work asynchronously”
+  it does not mean that `def` and `async def` are the same.FastAPI handles them differently.
+    * Consider this synchronous route:
+    ```py
+    @app.get("/")
+    def results():
+        results = some_sync_library()
+        return results
+ 
+    ```
+    If `some_sync_library()` blocks for 5 seconds, FastAPI does not run this def directly on its main async event loop. Instead, FastAPI runs the whole def route in a thread pool.
+    Conceptually:
+    ```
+    FastAPI event loop
+      │
+      ├── Request A → thread 1 → sync def() → blocking DB call
+      │
+      ├── Request B → thread 2 → sync def() → blocking DB call
+      │
+      └── Request C → event loop remains free
+    ```
+    * With async def, it's different:
+    ```py
+    @app.get("/")
+    async def results():
+        results = await some_async_library()
+        return results
+    ```
+    the coroutine pauses and lets the event loop work on another request while it waits.
+    Conceptually:
+    ```
+    One event loop
+ 
+    Request A
+    ↓
+    await database ───────────┐
+                            │ waiting
+    Request B                 │
+    ↓                      │
+    await API ─────────────┐   │
+                        │   │
+    Request C             │   │
+    ↓                  │   │
+    return result         │   │
+                        ↓   ↓
+                    resume
+    ```
+ 
+ 
+  * **But this can be bad:**
+    ```py
+    @app.get("/users")
+    async def users():
+        users = sync_database.get_users()  # blocking!
+        return users
+ 
+    ```
+    Because now you've put blocking synchronous code inside the event-loop thread:
+    ```
+    Event loop
+    ↓
+    async def
+    ↓
+    sync_database.get_users()
+    ↓
+    BLOCKED 
+ 
+    Other requests have to wait
+    ```
+    * FastAPI will still work asynchronously means;
+    ```
+ 
+    FastAPI server = asynchronous architecture
+ 
+    async def route
+        → runs directly on event loop
+        → can await without blocking
+ 
+    def route
+        → FastAPI moves it to a worker thread
+        → blocking code doesn't block event loop
+    ```
+ 
+***The Rule***
+| Your code/library                  | Route / Recommendation                                  |
+| ---------------------------------- | ------------------------------------------------------- |
+| Async DB/API/library               | `async def` + `await`                                   |
+| Blocking/synchronous DB/API/library| `def`                                                   |
+| Simple code that doesn't block     | Usually `async def`                                     |
+| CPU-heavy computation              | Neither solves the problem; use separate workers/processes |
+
+## 3- FastAPI install
+### 1. Old way venv (Still valid)
+```py
+python3 -m venv venv
+source venv/bin/activate
+pip3 install uvicorn fastapi
+# create main.py manually
+```
+### 2. The New Recommended Way venv
+```py
+uv init sampleProject --bare
+cd sampleProject
+uv add "fastapi[standard]"
+uv run fastapi dev
+```
+#### Why the Change?
+The new approach uses uv, a modern **Python package manager** that offers several advantages over the old workflow:
+* All-in-One Replacement: Replaces pip, pip-tools, pipx, poetry, pyenv, twine, and virtualenv.
+* **All-in-one**: uv handles creating the virtual environment, activating it, and installing packages — no need to do each step manually.
+* **Automatic virtual environment**: You don't need to create or activate it yourself; `uv run` handles it for you.
+* **Dependency locking**: `uv add` records exact package versions in a uv.lock file, so the same versions can be reproduced later on another machine or in deployment.
+---
+#### What Do These Commands Do?
+1.`uv init sampleProject --bare`
+* `uv init` - creates a new python project.
+* `sampleProject` - creates a new project inside a  new directory called `sampleProject`.
+* `--bare` - creates only the minimal `pyproject.toml` file without generating sample files like  `main.py` ,`Readme.md`.You will create the application files yourself in the next steps.
+2. `uv add fastapi[standard]`
+This single commands does three things automatically.
+* creates a virtual environment in a `.venv` folder inside your project.
+* Adds FastAPI(with its std optional dependencies) to `pyproject.toml`.
+* Creates `uv.lock` - a lock file that records the exact versions of FastAPI and all its dependencies,so the same version can be reproduce later.
+
+**In Short**
+|File	|Purpose|
+|---|---|
+|`pyproject.toml`|	What your project needs|
+|`uv.lock`	|Exact versions of everything installed|
+
+**The Process of recording exact version is called **locking** the project dependencies**
+
+3. Running your app
+Once setup, you run commands inside the project environment using `uv run`.
+
+    `uv run fastapi dev`
+
+    No manual virtual environment activation is needed.
+
+### 3.FastAPI AI Agent Skills
+FastAPI includes an official **skill** for AI coding agents.
+#### What it is?
+* A "skill" is guidence file (a `SKILL.md`) that gets installed alongside FastAPI in your project's `site-packages`.
+* It contains instructions tailored to help AI coding agents (like GitHub Copilot, Claude Code, Cursor, etc.) understand how to work correctly with FastAPI.
+* Because it's bundled with the FastAPI package itself, the guidance always matches the exact version of FastAPI you have installed — and updates it automatically when you upgrade FastAPI.
+### How Do you use it?
+After installing FastAPI in your project, run:
+
+`uvx library-skills`
+
+This command uses `uvx`(Which is just an alias for `uv tool run`)to run the Library Skills tool in a temporary,isolated environment.Library Skills then scans your project's installed packages,finds the FastAPI skill, and installs it for your project.
+* `Library Skills` is the external tool that discovers those files in your project's installed packages and installs them into your coding agent's configuration.
+
+**In Short**
+|Step|	Action|
+|---|---|
+|1	|Install FastAPI in your project|
+|2	|Run uvx library-skills|
+|3|	The tool(library skills) finds and installs the FastAPI skill for your AI agent|
+|4	|Your AI agent now has up-to-date FastAPI guidance| 
+
+## 4- First Steps
+
+### 1.`main.py`
+The Simplest FastAPI file could look this:
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
+```
+
+* Run the live Server
+
+    `uv run fastapi dev`
+* Interactive API docs
+
+    Now go to http://127.0.0.1:8000/docs
+
+    You will see the automatic interactive API documentation (provided by Swagger UI)
+
+* Alternative API docs
+    And now, go to http://127.0.0.1:8000/redoc
+
+    You will see the alternative automatic documentation (provided by ReDoc)
+
+### Schema
+A "schema" is a definition or description of something. Not the code that implements it, but just an abstract description.
+#### API "schema"
+In this case, OpenAPI is a specification that dictates how to define a schema of your API.
+
+This schema definition includes your API paths, the possible parameters they take, etc.
+
+#### Data "schema"
+The term "schema" might also refer to the shape of some data, like a JSON content.
+
+In that case, it would mean the JSON attributes, and data types they have, etc.
+
+---
+* OpenAPI defines an API schema for your API. And that schema includes definitions (or "schemas") of the data sent and received by your API using JSON Schema, the standard for JSON data schemas.
+
+#### `openapi.json`
+If you are curious about what the raw OpenAPI schema looks like, FastAPI automatically generates a JSON (schema) with the **descriptions of all your API**.
+
+* You can see it directly at: http://127.0.0.1:8000/openapi.json
+
+```py
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "FastAPI",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/items/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+
+
+
+...
+```
+By using this OPENAPI schema the 2 interactive docs created.
+### Configure the app
+#### Configure the app entrypoint in pyproject.toml
+You can configure where your app is located in a pyproject.toml file like:
+```py
+[tool.fastapi]
+entrypoint = "main:app"
+```
+That entrypoint will tell the fastapi command that it should import the app like:
+`from main import app`
+* If your code was structured like:
+    ```
+    .
+    ├── backend
+    │   ├── main.py
+    │   ├── __init__.py
+
+    ```
+    Then you would set the entrypoint as:
+    ```
+    [tool.fastapi]
+    entrypoint = "backend.main:app"
+    ```
+    Which would be equivalent to:
+
+    `from backend.main import app`
+
+#### fastapi dev with path or with --entrypoint CLI option
+You can also pass the file path to the fastapi dev command, and it will guess the FastAPI app object to use:
+
+`$ uv run fastapi dev main.py`
+
+Or, you can also pass the --entrypoint option to the fastapi dev command:
+
+`$ uv run fastapi dev --entrypoint main:app`
+But you would have to remember to pass the correct path\entrypoint every time you call the fastapi command.
+
+Additionally, other tools might not be able to find it, for example the VS Code Extension or FastAPI Cloud, so it is recommended to use the entrypoint in pyproject.toml.
+
+### Deploy
+You can deploy the FastAPI app to FastAPI Cloud by a single command.
+
+```
+uv run fastapi deploy
+
+Deploying to FastAPI Cloud...
+
+✅ Deployment successful!
+
+🐔 Ready the chicken! Your app is ready at https://myapp.fastapicloud.dev
+```
+The CLI will automatically detect your FastAPI application and deploy it to the cloud. If you are not logged in, your browser will open to complete the authentication process.
+
+That's it! Now you can access your app at that URL
+
+### Recap
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
+```
+
+#### 1.Import `Fastapi`
+`from fastpi import FastAPI`
+:::info
+ FastAPI is a class that inherits directly from Starlette.You can use all the Starlette functionality with FastAPI too.
+:::
+#### 2. Create an instance
+
+`app=FastAPI()`
+
+Here the `app` variable will be an "instance" of the class `FastAPI`.This will be the main point of interaction to create all your API.
+
+#### 3. Create path operation
+##### Path
+"Path" here refers to the last part of the URL starting from the first `/`.
+So, in a URL like:
+
+`https://example.com/items/foo`
+
+The path would be,
+
+`/items/foo`
+
+* A "path" is also commonly called an "endpoint" or a "route".
+* While building an API, the "path" is the main way to separate "concerns" and "resources".
+
+##### Operation
+"Operation" here refers to one of the HTTP "methods".
+One of:
+* `POST`
+* `GET`
+* `PUT`
+* `DELETE`
+
+... and more exotic means 
+* `OPTIONS`
+* `HEAD`
+* `PATCH`
+* `TRACE`
+
+In the HTTP protocol, you can communicate to each path using one (or more) of these "methods".
+
+* When building APIs, you normally use these specific HTTP methods to perform a specific action.
+
+Normally you use:
+
+
+* `POST`: to create data.
+* `GET`: to read data.
+* `PUT`: to update data.
+* `DELETE`: to delete data.
+
+So, in OpenAPI, each of the HTTP methods is called an "operation".
+
+We are going to call them "operations" too.
+
+* Define a path operation decorator
+
+    `@app.get("/")`
+* In our case, this decorator tells FastAPI that the function below corresponds to the path `/` with an operation `get`.
+
+    It is the "path operation decorator".
+
+* You can also use the other operations:
+
+    * @app.post()
+    * @app.put()
+    * @app.delete()
+
+    And more exotic ones,
+
+    * @app.options()
+    * @app.head()
+    * @app.patch()
+    * @app.trace()
+
+* You are free to use each operation (HTTP method) as you wish.
+For example, when using GraphQL you normally perform all the actions using only POST operations.
+
+#### 4.Define the path operation function
+
+This is our "path operation function":
+
+* **path**: is `/`.
+* **operation**: is `get`.
+* **function**: is the function below the "decorator" (below `@app.get("/")`).
+
+```py
+async def root():
+    return {"message": "Hello World"}
+```
+You could also define it as a normal function instead of async def.
+
+#### 5. Return the content
+* You can return a dict, list, singular values as str, int, etc.
+* You can also return Pydantic models.
+* There are many other objects and models that will be automatically converted to JSON (including ORMs, etc)
+
+#### 6.Deploy it
+Deploy your app to FastAPI Cloud with one command `fastpi deploy`
+##### About FastAPI Cloud
+* FastAPI Cloud is built by the same author and team behind FastAPI.
+* It streamlines the process of building, deploying, and accessing an API with minimal effort.
+* FastAPI Cloud is the primary sponsor and funding provider for the FastAPI and friends open source projects
+##### Deploy to other cloud providers
+FastAPI is open source and based on standards. You can deploy FastAPI apps to any cloud provider you choose.
+
+
+## 5- Path Parameters
+You can declare path "parameters" or "variables" with the same syntax used by Python format strings:
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id):
+    return {"item_id": item_id}
+
+```
+The value of the path parameter `item_id` will be passed to your function as the argument `item_id`.
+
+### Path Parameters with types
+You can declare the type of a path parameter in the function, using standard Python type annotations:
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: int):
+    return {"item_id": item_id}
+```
+But if you go to the browser at http://127.0.0.1:8000/items/foo, you will see a nice HTTP error of:
+
+```
+{
+  "detail": [
+    {
+      "type": "int_parsing",
+      "loc": [
+        "path",
+        "item_id"
+      ],
+      "msg": "Input should be a valid integer, unable to parse string as an integer",
+      "input": "foo"
+    }
+  ]
+}
+```
+:::info
+* This will give you editor support inside of your function, with error checks, completion, etc.
+* So, with that type declaration, FastAPI gives you automatic request "parsing".Means whatever we given in the request the response also give the same datatype of the paramater here.
+* So, with the same Python type declaration, FastAPI gives you data validation.Notice that the error also clearly states exactly the point where the validation didn't pass.This is incredibly helpful while developing and debugging code that interacts with your API.
+:::
+
+### Pydantic
+All the data validation is performed under the hood by Pydantic, so you get all the benefits from it. 
+You can use the same type declarations with str, float, bool and many other complex data types.
+
+### Order matters
+When creating path operations, you can find situations where you have a fixed path.
+Like `/users/me`, let's say that it's to get data about the current user.
+And then you can also have a path `/users/{user_id}` to get data about a specific user by some user ID.
+Because **path operations are evaluated in order**, you need to make sure that the path for `/users/me` is declared before the one for `/users/{user_id}`:
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/users/me")
+async def read_user_me():
+    return {"user_id": "the current user"}
+
+
+@app.get("/users/{user_id}")
+async def read_user(user_id: str):
+    return {"user_id": user_id}
+
+```
+Otherwise, the path for /users/{user_id} would match also for /users/me, "thinking" that it's receiving a parameter user_id with a value of "me".
+
+* Similarly, **you cannot redefine a path operation:**
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/users")
+async def read_users():
+    return ["Rick", "Morty"]
+
+
+@app.get("/users")
+async def read_users2():
+    return ["Bean", "Elfo"]
+```
+The first one will always be used since the path matches first.
+
+### Predefined values
+If you have a path operation that receives a path parameter, but you want the possible valid path parameter values to be predefined, you can use a standard Python `Enum`.
+
+#### Create an Enum class
+Import `Enum` and create a sub-class that inherits from `str` and from `Enum`.
+
+By inheriting from str the API docs will be able to know that the values must be of type string and will be able to render correctly.
+
+Then create class attributes with fixed values, which will be the available valid values:
+:::info
+The three attributes declared in the Enum class are Enum members, and each member is an instance of that Enum class itself.
+So ModelName.alexnet isn't just a string. It is an Enum member whose value happens to be "alexnet".
+* Why doesn't `Enum` behave like a "normal class"?
+Actually, it is a class, but `Enum` uses special Python machinery to change how class attributes are created.
+:::
+
+```
+ModelName              # the Enum class/type
+
+ModelName.alexnet      # an Enum member / instance
+
+ModelName.alexnet.value # the underlying string "alexnet"
+```
+
+
+```py
+from enum import Enum
+
+from fastapi import FastAPI
+
+
+class ModelName(str, Enum):
+    alexnet = "alexnet"
+    resnet = "resnet"
+    lenet = "lenet"
+
+
+app = FastAPI()
+
+
+@app.get("/models/{model_name}")
+async def get_model(model_name: ModelName):
+    if model_name is ModelName.alexnet:
+        return {"model_name": model_name, "message": "Deep Learning FTW!"}
+
+    if model_name.value == "lenet":
+        return {"model_name": model_name, "message": "LeCNN all the images"}
+
+    return {"model_name": model_name, "message": "Have some residuals"}
+```
+#### Working with Python enumerations
+
+* The annotation:
+
+`model_name: ModelName`
+
+means:
+
+"The value model_name argument should be a ModelName Enum member(eg:ModelName.alexnet) not the ModelName class itself.."
+
+You can compare it with the enumeration member in your created enum ModelName:
+
+* **Get Enumeration value**
+
+    You can get the actual value (a str in this case) using model_name.value, or in general, your_enum_member.value
+
+#### Return enumeration members
+* You can return enum members from your path operation, even nested in a JSON body (e.g. a dict).
+* They will be converted to their corresponding values (strings in this case) before returning them to the client:
+
+### Path parameters containing paths
+Let's say you have a path operation with a path` /files/{file_path}`.
+But you need file_path itself to contain a path, like `home/johndoe/myfile.txt`.
+
+So, the URL for that file would be something like: `/files/home/johndoe/myfile.txt`.
+
+#### OpenAPI support
+* OpenAPI doesn't support a way to declare a path parameter to contain a path inside, as that could lead to scenarios that are difficult to test and define.
+* Nevertheless, you can still do it in FastAPI, using one of the internal tools from Starlette.And the docs would still work, although not adding any documentation telling that the parameter should contain a path.
+#### Path convertor
+* Using an option directly from Starlette you can declare a path parameter containing a path using a URL like:
+`/files/{file_path:path}`
+* In this case, the name of the parameter is file_path, and the last part, :path, tells it that the parameter should match any path.
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/files/{file_path:path}")
+async def read_file(file_path: str):
+    return {"file_path": file_path}
+```
+
+:::info
+You might need the parameter to contain /home/johndoe/myfile.txt, with a leading slash (/).
+
+In that case, the URL would be: /files//home/johndoe/myfile.txt, with a double slash (//) between files and home.
+:::
+
+## 6-Query Parameters
+When you declare other function parameters that are not part of the path parameters, they are automatically intrepreted as "query" parameters.
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+@app.get("/items/")
+async def read_item(skip: int = 0, limit: int = 10):
+    return fake_items_db[skip : skip + limit]
+```
+* The query is the set of key-value pairs that go after the ? in a URL, separated by & characters.
+For example in the URL,
+```
+http://127.0.0.1:8000/items/?skip=0&limit=10
+```
+..the query parameters are:
+
+- skip: with a value of 0
+- limit: with a value of 10
+
+As they are part of the URL, they are "naturally" strings.
+
+But when you declare them with Python types (in the example above, as `int`), they are converted to that type and validated against it.
+
+* All the same processes that apply to path parameters also apply to query parameters:
+    * Editor support (obviously)
+    * Data "parsing"
+    * Data validation
+    * Automatic documentation
+
+### Defaults
+As query parameters are not a fixed part of a path, they can be optional and can have default values.
+
+In the example above they have default values of skip=0 and limit=10.
+So, going to the URL:
+`http://127.0.0.1:8000/items/`
+
+would be the same as going to:
+
+
+`http://127.0.0.1:8000/items/?skip=0&limit=10`
+
+### Optional parameters
+The same way, you can declare optional query parameters, by setting their default to None:
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: str | None = None):
+    if q:
+        return {"item_id": item_id, "q": q}
+    return {"item_id": item_id}
+```
+In this case, the function parameter q will be optional, and will be None by default.
+
+### Query parameter type conversion
+You can also declare `bool` types, and they will be converted.
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: str | None = None, short: bool = False):
+    item = {"item_id": item_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+```
+In this case if you go to:
+
+`http://127.0.0.1:8000/items/foo?short=1`
+
+or
+
+`http://127.0.0.1:8000/items/foo?short=True`
+
+or
+
+`http://127.0.0.1:8000/items/foo?short=true`
+
+or
+
+`http://127.0.0.1:8000/items/foo?short=on`
+
+or
+
+`http://127.0.0.1:8000/items/foo?short=yes`
+
+or any other case variation (uppercase, first letter in uppercase, etc), your function will see the parameter short with a bool value of True. Otherwise as False.
+
+### Multiple path and query parameters
+
+You can declare multiple path parameters and query parameters at the same time, FastAPI knows which is which.
+
+And you don't have to declare them in any specific order.
+
+**They will be detected by name**:
+
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/users/{user_id}/items/{item_id}")
+async def read_user_item(
+    user_id: int, item_id: str, q: str | None = None, short: bool = False
+):
+    item = {"item_id": item_id, "owner_id": user_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+
+```
+
+### Required query parameters
+
+* When you declare a default value for non-path parameters (for now, we have only seen query parameters), then it is not required.
+
+* If you don't want to add a specific value but just make it optional, set the default as None.
+
+* But when you want to make a query parameter required, you can just not declare any default value:
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_user_item(item_id: str, needy: str):
+    item = {"item_id": item_id, "needy": needy}
+    return item
+```
+Here the query parameter needy is a required query parameter of type str.
+
+If you open in your browser a URL like:
+```
+http://127.0.0.1:8000/items/foo-item
+```
+
+...without adding the required parameter needy, you will see an error like:
+
+```
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": [
+        "query",
+        "needy"
+      ],
+      "msg": "Field required",
+      "input": null
+    }
+  ]
+}
+```
+As needy is a required parameter, you would need to set it in the URL:
+
+`http://127.0.0.1:8000/items/foo-item?needy=sooooneedy`
+
+...this would work:
+
+```py
+{
+    "item_id": "foo-item",
+    "needy": "sooooneedy"
+}
+```
+And of course, you can define some parameters as required, some as having a default value, and some entirely optional:
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+async def read_user_item(
+    item_id: str, needy: str, skip: int = 0, limit: int | None = None
+):
+    item = {"item_id": item_id, "needy": needy, "skip": skip, "limit": limit}
+    return item
+```
+In this case, there are 3 query parameters:
+
+* `needy`, a required `str`.
+* `skip`, an `int` with a default value of `0`.
+* `limit`, an optional `int`.
+
+:::info
+You could also use Enums the same way as with Path Parameters.
+:::
+## 7- Request Body
+* When you need to send data from a client to your API, you send it as a **request body**.
+* A request Body is the data sent by the client to your API.A **response body** is the data your API send to the client.
+* Your API almost has to send a response body.But client dont necessarily need to send **request bodies** all the time,sometimes they only request a path, maybe with some query parameters, but don't send a body.
+* To declare a request body, you use Pydantic models with all their power and benefits.
+
+:::info
+* To send data, you should use one of: `POST` (the most common), `PUT`, `DELETE` or `PATCH`.
+
+* Sending a body with a `GET` request has an undefined behavior in the specifications, nevertheless, it is supported by FastAPI, only for very complex/extreme use cases.
+
+* As it is discouraged, the interactive docs with Swagger UI won't show the documentation for the body when using `GET`, and proxies in the middle might not support it.
+:::
+#### Pydantic Model
+First, you need to import BaseModel from pydantic:
+
+```py
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
+app = FastAPI()
+
+
+@app.post("/items/")
+async def create_item(item: Item):
+    return item
+
+```
+#### Create your model
+* Then you declare your data model as a class that inherits from `BaseModel`.
+* Use standard Python types for all the attributes.
+* The same as when declaring query parameters, when a model attribute has a default value, it is not required. Otherwise, it is required. Use None to make it just optional.
+
+:::info
+**Automatic conversion is happening in Path params,Query params, Pydantic model params.
+eg:`str` to `int` for "3" to 3 , but not for "foo" to int
+:::
+
+#### Declare pydnatic model as a parameter.
+* To add it to your path operation, declare it the same way you declared path and query parameters:...and declare its type as the model you created, `Item`.
+
+#### Results
+With the just that pyton declaration in pydnatic model,**FASTAPI** will,
+* When FastAPI reads the request body, it reads it as `JSON` first, and then Pydantic converts it into a `model instance`.
+* Convert the corresponding types(if needed)
+* Validate the data
+    * If the data is invalid, it will return a nice and clear error, indicating exactly where and what was the incorrect data.
+* Give you the received data in the parameter `item`
+    * As you declared it in the function to be of type `Item`, you will also have all the editor support (completion, etc) for all of the attributes and their types.
+* Generate `JSON Schema` definitions for your model, you can also use them anywhere else you like if it makes sense for your project.
+```
+print(Item.model_json_schema())
+# Returns a dict with the full JSON Schema
+````
+* Those schemas will be part of the generated OpenAPI schema, and used by the automatic documentation UIs.
+
+:::info
+If you use `PyCharm` as your editor, you can use the `Pydantic PyCharm Plugin`.
+
+It improves editor support for Pydantic models, with:
+
+auto-completion
+type checks
+refactoring
+searching
+inspections
+:::
+
+#### Use the Pydantic Model
+Inside of the function, you can access all the attributes of the model object directly.
+```py
+@app.post("/items/")
+async def create_item(item: Item):
+    item_dict = item.model_dump()
+    if item.tax is not None:
+        price_with_tax = item.price + item.tax
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+```
+
+#### Request body + path + query parameters
+You can also declare body, path and query parameters, all at the same time.
+FastAPI will recognize each of them and take the data from the correct place.
+
+```py
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item, q: str | None = None):
+    result = {"item_id": item_id, **item.model_dump()}
+    if q:
+        result.update({"q": q})
+    return result
+```
+The function parameters will be recognized as follows:
+
+* If the parameter is also declared in the path, it will be used as a path parameter.
+* If the parameter is of a singular type (like int, float, str, bool, etc) it will be interpreted as a query parameter.
+* If the parameter is declared to be of the type of a Pydantic model, it will be interpreted as a request body.
+
+## 8-Response
+### A- Return Type Annotation
+* You can declare the type used for the response by annotating the path operation function **return type**.
+```py
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+    tags: list[str] = []
+
+
+@app.post("/items/")
+async def create_item(item: Item) -> Item:
+    return item
+
+
+@app.get("/items/")
+async def read_items() -> list[Item]:
+    return [
+        Item(name="Portal Gun", price=42.0),
+        Item(name="Plumbus", price=32.0),
+    ]
+```
+FASTAPI will use this return type to:
+
+* **Validate** the returned data
+    * If the data is invalid (e.g. you are missing a field), it means that your app code is broken, not returning what it should, and it will return a server error instead of returning incorrect data.
+* Add a **JSON Schema** for the response, in the OpenAPI path operation.When you annotate your return type, Pydantic automatically generates a JSON Schema for the response.
+    * This will be used by the automatic docs.
+    * It will also be used by automatic client code generation tools.
+* **Serialize** the returned data to JSON using Pydantic, which is written in Rust, so it will be much faster.
+
+    **Serialization** means converting your Python object into JSON format so it can be sent over the network to the client.
+* It will limit and filter the output data to what is defined in the return type.
+    * This is particularly important for security, we'll see more of that below.
+
+**The Flow**
+
+-> **For request**
+```py
+Raw JSON (from request body)
+        ↓
+    Python dict
+        ↓
+Pydantic validates & converts
+        ↓
+Python object (model instance) → your function receives this
+```
+-> **For response**
+```py
+Python object (returned from your function)
+        ↓
+Pydantic serializes using Rust engine
+        ↓
+JSON bytes → sent to the client
+```
+
+### B- Response Model- `response_model` Parameter
+
+* There are some cases where you need or want to return some data(eg:dict or object) that is not exactly what the type declares in Pydantic Model.
+
+* In those cases, you can use the path operation decorator parameter `response_model` instead of the `return type`.
+
+```py
+from typing import Any
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+    tags: list[str] = []
+
+
+@app.post("/items/", response_model=Item)
+async def create_item(item: Item) -> Any:
+    return item
+
+
+@app.get("/items/", response_model=list[Item])
+async def read_items() -> Any:
+    return [
+        {"name": "Portal Gun", "price": 42.0},
+        {"name": "Plumbus", "price": 32.0},
+    ]
+```
+:::info
+
+Notice that response_model is a parameter of the "decorator" method (get, post, etc). Not of your path operation function, like all the parameters and body.
+
+:::
+
+* `response_model` receives the same type you would declare for a Pydantic model field, so, it can be a Pydantic model, but it can also be, e.g. a `list` of Pydantic models, like `List[Item]`.
+* FastAPI will use this `response_model` to do all the data documentation, validation, etc. and also to **convert and filter the output** data to its type declaration.
+
+
+#### Adding an output model
+```py
+from typing import Any
+
+from fastapi import FastAPI
+from pydantic import BaseModel, EmailStr
+
+app = FastAPI()
+
+
+class UserIn(BaseModel):
+    username: str
+    password: str
+    email: EmailStr
+    full_name: str | None = None
+
+
+class UserOut(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: str | None = None
+
+
+@app.post("/user/", response_model=UserOut)
+async def create_user(user: UserIn) -> Any:
+    return user
+```
+...we declared the response_model to be our model UserOut, that doesn't include the password:
+
+So, FastAPI will take care of filtering out all the data that is not declared in the output model (using Pydantic).(password is not there `UserOut` so it filtered out in the response)
+
+#### `response_model` priority
+* If you declare both a return type and a response_model, the response_model will take priority and be used by FastAPI.
+* You can also use `response_model=None` to disable creating a response model for that path operation, you might need to do it if you are adding type annotations for things that are not valid Pydantic fields.
+
+
+:::info
+
+**The Problem with 2 Different Models**
+
+When you have `UserIn` and `UserOut` as completely different classes:
+```py
+class UserIn(BaseModel):
+    username: str
+    password: str
+    email: str
+
+class UserOut(BaseModel):
+    username: str
+    email: str
+    # no password
+```
+**Option 1: Annotate return type as `UserOut`**
+```py
+@app.post("/user/")
+async def create_user(user: UserIn) -> UserOut:  # ← annotated as UserOut
+    return user  # ← but returning UserIn instance!
+```
+
+Problem: Your editor (VS Code, PyCharm) and mypy will immediately complain:
+```
+Error: Returning UserIn but expected UserOut
+— these are different classes!
+```
+Because `UserIn` and `UserOut` are not related — one is not a subclass of the other. So the editor sees this as a type mismatch. 
+
+**Option 2: Use response_model parameter**
+```py
+@app.post("/user/", response_model=UserOut)  # ← filtering handled here
+async def create_user(user: UserIn) -> Any:  # ← return Any to avoid editor complaints
+    return user  # ← returning UserIn, but FastAPI filters it to UserOut
+```
+* Editor/mypy — happy because return type is Any (no complaints)
+
+* FastAPI — uses response_model=UserOut to filter the data
+
+* Client — only receives fields declared in UserOut
+
+FastAPI will still do the data documentation, validation, filtering, etc. with the `response_model`.
+
+**But what about editor support being lost?**
+#### Return Type and Data Filtering
+
+When you use -> Any, yes — you lose editor support (no autocompletion, no type checking on the return value).The better solution is to use inheritance instead:
+
+```py
+class BaseUser(BaseModel):
+    username: str
+    email: str
+
+class UserIn(BaseUser):  # ← inherits from BaseUser
+    password: str
+
+@app.post("/user/")
+async def create_user(user: UserIn) -> BaseUser:  # ← valid! UserIn IS a BaseUser
+    return user
+```
+Now:
+* Editor/mypy — happy because UserIn is a subclass of BaseUser
+* FastAPI — filters out password because return type is BaseUser
+* Best of both worlds! 
+
+**Summary Table:**
+
+|Approach	|Editor Support	|FastAPI Filtering,validation,documeantation|
+|---|---|---|
+|-> UserOut with different class|	❌ Raise Complains|	---|
+|-> Any + response_model=UserOut|	❌ Lost|	✅ Works|
+|Inheritance + -> BaseUser|	✅ Works|	✅ Works|
+
+The inheritance approach is the recommended way when you need both editor support and data filtering,documentation and documentation!
+
+:::
+
+#### Other return type Annotation
+
+Sometimes you want to return something that is not a valid Pydantic type(that means no Filtering,validation,documeantation support ), but you still want to annotate t
+he function to get editor/mypy support.
+
+There are 3 cases:
+
+##### Case 1: Return a Response Directly
+
+when you using the Response, you are NOT setting response_model=None explicitly. Fastapi automatically skips Pydantic processing on its own.So no Validation,filtering,documentation.That means we takes the full control.
+
+
+```py
+from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse, RedirectResponse
+
+app = FastAPI()
+
+@app.get("/portal")
+async def get_portal(teleport: bool = False) -> Response:
+    if teleport:
+        return RedirectResponse(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    return JSONResponse(content={"message": "Here's your portal."})
+```
+
+* FastAPI — handles it automatically ✅
+
+* Editor/mypy — happy because RedirectResponse and JSONResponse are both subclasses of Response ✅
+
+##### Case 2: Invalid Return Type Annotations 
+```py
+@app.get("/portal")
+async def get_portal(teleport: bool = False) -> Response | dict:
+    if teleport:
+        return RedirectResponse(url="...")
+    return {"message": "Here's your portal."}
+```
+* This fails because the return type is a union of Response and dict.
+* dict is not a valid Pydantic type
+* FastAPI tries to create a Pydantic response model from it and fails
+
+**Solution: Disable Response Model**
+
+When you have an invalid return type annotation but still want to keep it for editor support: 
+
+Disable Response Model
+
+```py
+@app.get("/portal", response_model=None)  # ← disable response model
+async def get_portal(teleport: bool = False) -> Response | dict:
+    if teleport:
+        return RedirectResponse(url="...")
+    return {"message": "Here's your portal."}
+```
+* response_model=None tells FastAPI to skip response model generation
+* Editor/mypy still get the type annotation support ✅
+* FastAPI is not affected ✅
+
+| Case | Works? | Why |
+|---|---|---|
+| `-> Response` | ✅ | Response class or subclass |
+| `-> RedirectResponse` | ✅ | Subclass of `Response` |
+| `-> Response \| dict` | ❌ | Union with non-Pydantic type |
+| `-> Response \| dict` + `response_model=None` | ✅ | Response model generation disabled |
+
+:::info
+
+For Response, the Validation,filtering,documentation support is not there .But editor.mpy etc support will be there. 
+
+#### Response Model Encoding Parameters
+
+FastAPI (via Pydantic) provides several parameters on the path operation decorator to control how your response model is serialized — particularly useful when your model has fields with default values.
+
+**The Problem**
+
+Your response model may define default values:
+```py
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None  # default: None
+    price: float
+    tax: float = 10.5              # default: 10.5
+    tags: list[str] = []           # default: []
+
+```
+If a stored item only has name and price, you probably don't want the response bloated with all those defaults.
+
+##### `response_model_exclude_unset`
+
+Set this to True to only include fields that were explicitly set, omitting any that still hold their default value:
+
+```py
+@app.get("/items/{item_id}", response_model=Item, response_model_exclude_unset=True)
+async def read_item(item_id: str):
+    return items[item_id]
+```
+For an item stored as {"name": "Foo", "price": 50.2}, the response will be:
+```
+{
+    "name": "Foo",
+    "price": 50.2
+}
+```
+No description, tax, or tags — because they were never explicitly set. 
+
+FastAPI/Pydantic is smart enough to distinguish between "this field was never set" and "this field was explicitly set to a value that happens to equal the default."
+If the deafault set value and explicitily set values are same that time wont omit.
+
+**Related Parameters**
+You can also use these alternatives on the decorator:
+
+* `response_model_exclude_defaults=True` — excludes fields whose value equals their default (regardless of whether they were explicitly set)
+* `response_model_exclude_none=True` — excludes fields whose value is `None`
+
+##### `response_model_include` and `response_model_exclude`
+
+For a quick shortcut to include or exclude specific fields by name:
+
+```py
+# Only return name and description
+@app.get("/items/{item_id}/name", response_model=Item, response_model_include={"name", "description"})
+async def read_item_name(item_id: str):
+    return items[item_id]
+
+# Return everything except tax
+@app.get("/items/{item_id}/public", response_model=Item, response_model_exclude={"tax"})
+async def read_item_public_data(item_id: str):
+    return items[item_id]
+```
+:::info
+
+* **Tip:** If you pass a list or tuple instead of a set, FastAPI will automatically convert it.
+
+* **Caution:** Using `response_model_include`/`response_model_exclude` does not affect the OpenAPI/JSON Schema generated for your docs — it will still reflect the full model. For cleaner schema separation, prefer defining multiple Pydantic model classes instead.
+
+:::
+
+## 9-Response Status Code
+The same way you can specify a response model, you can also declare the HTTP status code used for the response with the parameter status_code in any of the path operation decorator.
+
+```py
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=201)
+async def create_item(name: str):
+    return {"name": name}
+```
+* The status_code parameter receives a number with the HTTP status code.
+
+:::info
+
+`status_code` can alternatively also can receive an `IntEnum`.`IntEnum` — a special Python type that is both an integer and an enum member at the same time.eg:`http.HTTPStatus`
+
+* Python's standard library includes `http.HTTPStatus`, which is an IntEnum. It gives you named constants for every standard HTTP status code
+
+```py
+from http import HTTPStatus
+
+print(HTTPStatus.CREATED)        # HTTPStatus.CREATED
+print(int(HTTPStatus.CREATED))   # 201
+print(HTTPStatus.CREATED.phrase) # 'Created'
+```
+So `HTTPStatus.CREATED` is the number `201`, but with a human-readable name attached.
+
+In FastAPI
+```py
+from http import HTTPStatus
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.post("/items/", status_code=HTTPStatus.CREATED)
+async def create_item(name: str):
+    return {"name": name}
+```
+**Why use it?**
+* Readability: `HTTPStatus.CREATED` is clearer than a bare `201`.
+* No memorization needed: You don't have to remember which number maps to which meaning.
+
+**The FastAPI way (recommended shortcut)**
+FastAPI also provides its own convenience constants via `fastapi.status`, which is the more common approach:
+
+```py
+from fastapi import FastAPI, status
+
+app = FastAPI()
+
+@app.post("/items/", status_code=status.HTTP_201_CREATED)
+async def create_item(name: str):
+    return {"name": name}
+
+```
+* Both `http.HTTPStatus.CREATED` and `status.HTTP_201_CREATED` resolve to the integer 201 — they're just different ways to write the same thing with a readable name instead of a magic number.
+* `fastapi.status.HTTP_201_CREATED` is just an integer constant (int), **not** an `IntEnum` member.
+
+:::
+
+The status code will
+* Return the status code in the response.
+* Document as such in the OpenAPI schema(and so in user interface)
+### About Http status code
+In HTTP, you send a numeric status code of 3 digits as part of the response.
+These status codes have an associated name to help recognize them, but the important part is the number.
+
+In short
+* `100` to `199` for **information**.You are rerely use them directly.Responses with these status codes doesn't have body.
+* `200 - 299` are for "Successful" responses. These are the ones you would use the most.
+    * `200` is the default status code, which means everything was "OK".
+    * Another example would be `201`, "Created". It is commonly used after creating a new record in the database.
+    * A special case is `204`, "No Content". This response is used when there is no content to return to the client, and so the response must not have a body.
+* 300 - 399 are for "Redirection". Responses with these status codes may or may not have a body, except for 304, "Not Modified", which must not have body.
+    How 304 works
+    1. 304 is used in HTTP caching. The flow looks like this:
+    2. Your browser requests a resource (e.g., an image or page).
+    3. The server responds with 200 OK and sends the full content.
+    4. Your browser caches that content.
+    5. Next time you request the same resource, the browser asks: "Has this changed since I last got it?"
+    6. If nothing has changed, the server replies with 304 Not Modified.
+    7. The browser then uses its cached copy instead.
+* `400 - 499` are for "Client error" responses. These are the second type you would probably use the most.
+    * An example is 404, for a "Not Found" response.
+    * For generic errors from the client, you can just use 400.
+* `500 - 599` are for server errors. You almost never use them directly. When something goes wrong at some part in your application code, or server, it will automatically return one of these status codes.
+
+**Shortcut to remember names**
+You can use the convenience variables from `fastapi.status`.They are just a convenience, they hold the same number, but that way you can use the editor's autocomplete to find them.
+
+```py
+from fastapi import FastAPI, status
+
+app = FastAPI()
+
+
+@app.post("/items/", status_code=status.HTTP_201_CREATED)
+async def create_item(name: str):
+    return {"name": name}
+```
+
+:::info
+
+You could also use from starlette import status.
+
+FastAPI provides the same starlette.status as fastapi.status just as a convenience for you, the developer. But it comes directly from Starlette.
+
+:::
+    
