@@ -682,7 +682,7 @@ async def read_user(user_id: str):
     return {"user_id": user_id}
 
 ```
-Otherwise, the path for /users/{user_id} would match also for /users/me, "thinking" that it's receiving a parameter user_id with a value of "me".
+Otherwise, the path for `/users/{user_id}` would match also for /users/me, "thinking" that it's receiving a parameter user_id with a value of "me".
 
 * Similarly, **you cannot redefine a path operation:**
 ```py
