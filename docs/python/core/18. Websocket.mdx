@@ -1288,7 +1288,7 @@ Token.objects.get(key=token)  # DB lookup
 **2. JWT (JSON Web Token) — No DB Lookup Needed**
  
 The token itself **contains** the user data (encoded, not stored server-side):
-1. Server creates: `token = jwt.encode(payload, SECRET_KEY, algorithm="HS256") #payload={"user_id":--,"exp":--}`
+1. Server creates: `token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")`, where the payload contains fields such as `user_id` and `exp`.
 2. Client sends: `Authorization: Bearer <JWT>`.
 3. Server **decodes** the token directly: `user_id = 5`. No database lookup required.
 ```python
