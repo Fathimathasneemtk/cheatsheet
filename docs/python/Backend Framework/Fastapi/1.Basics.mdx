@@ -1446,12 +1446,11 @@ async def read_item(item_id: str):
     return items[item_id]
 ```
 For an item stored as {"name": "Foo", "price": 50.2}, the response will be:
-```
-{
+`{
     "name": "Foo",
     "price": 50.2
-}
-```
+}`
+
 No description, tax, or tags — because they were never explicitly set. 
 
 FastAPI/Pydantic is smart enough to distinguish between "this field was never set" and "this field was explicitly set to a value that happens to equal the default."
