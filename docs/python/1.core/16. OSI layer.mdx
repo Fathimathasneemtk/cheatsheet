@@ -1,0 +1,579 @@
+## What is the OSI Model?
+ 
+The **OSI Model** (Open Systems Interconnection Model) is a conceptual framework used to understand how different networking systems communicate over a network.
+ 
+Think of it as a **7-layer structure**, where each layer has a specific job in sending data from one device to another.
+
+---
+ 
+## Prerequisite Knowledge
+ 
+### What is a Network?
+ 
+ A **network** = a group of devices connected together.
+ 
+**Examples:**
+- Your phone + laptop + router
+- Office computers
+- The entire internet
+
+### What is a Local Network (LAN)?
+ 
+A **Local Network** is a small network in one place. All devices connected to the same router are part of one local network.
+ 
+**Examples:**
+- Your home Wi-Fi
+- Office network
+- College lab network
+**Key features of a Local Network:**
+- Devices can talk to each other directly
+- Uses:
+  - MAC address
+  - Local IP (e.g., `192.168.x.x`)
+- Controlled by a router
+
+
+### What is the Internet?
+ 
+The **Internet** = a network of networks — a global network connecting many local networks together.
+
+It connects:
+- Your home network
+- Other homes
+- Data centers (e.g., Google, Facebook servers)
+
+Everything is connected globally.
+ 
+**Local Network vs. Internet**
+ 
+| Local Network | Internet |
+|---|---|
+| Small (home/office) | Global |
+| Direct communication | Through many routers |
+| Uses MAC + local IP | Uses public IP |
+| Controlled by router | No single owner |
+
+### MAC address
+* The MAC address (Media Access Control address) is a unique identifier burned into a device's network hardware — like the network card in your laptop or phone
+* It's a hardware identity, not a network identity. Every network-capable device (laptop, phone, router, printer) has one assigned by its manufacturer.
+* In theory: every device in the world has a globally unique MAC address.
+* In practice: what actually matters for communication is uniqueness within your local network.
+---
+
+## The 7 Layers of the OSI Model (Top → Bottom)
+ 
+### 7. Application Layer
+- Closest to the user
+- Provides network services to applications
+- Examples: web browsers, email apps
+- Protocols: **HTTP, FTP, SMTP**
+👉 **Example:** When you open a website, this layer handles that request.
+
+### 6. Presentation Layer
+- Responsible for data format, encryption, and compression
+- Converts data into a readable format
+👉 **Example:** Converts data into JSON, encrypts it using SSL.
+
+### 5. Session Layer
+- Manages sessions (connections) between devices
+- Starts, maintains, and ends communication
+👉 **Example:** Keeps your login session active on a website.
+
+### 4. Transport Layer
+- Ensures reliable data transfer
+- Handles error detection and flow control
+- Protocols: **TCP, UDP**
+👉 **Example:** TCP ensures all packets arrive correctly.
+
+### 3. Network Layer
+- Handles routing (path selection)
+- Uses IP addresses to find the destination
+
+👉 **Example:** Decides how your data travels across the internet.
+ 
+### 2. Data Link Layer
+- Responsible for node-to-node delivery
+- Performs error detection at the MAC address level
+👉 **Example:** Communication between two devices in the same network (like Wi-Fi).
+ 
+> Data doesn't travel directly from you to a destination (e.g., Google) in one step. It goes step by step, hop by hop — and each step is an example of node-to-node delivery.
+
+### 1. Physical Layer
+- Deals with hardware and signals
+- Transmits raw bits (0s and 1s)
+👉 **Example:** Cables, switches, electrical signals.
+
+---
+
+## Simple Real-Life Example: Sending a WhatsApp Message -IMP
+ 
+| Layer | Action |
+|---|---|
+| Application | You type the message |
+| Presentation | Message gets encrypted |
+| Session | Connection is maintained |
+| Transport | Message is split into packets |
+| Network | Finds the route |
+| Data Link | Sent within the local network |
+| Physical | Sent as electrical signals |
+ 
+---
+
+## Tracing a Login Request Through the OSI Layers
+ 
+This section walks through what really happens, layer by layer, when you submit a login form (e.g., on a Django-based website) — from your device, across the internet, to the server, and back.
+ 
+### Step 1: You Enter Login Details — Application Layer (7)
+- You type your username & password and click **Login**
+- The browser/app creates a request (usually HTTP/HTTPS)
+### Step 2: Data Formatting & Security — Presentation Layer (6)
+- The data is:
+  - Encrypted (HTTPS → SSL/TLS)
+  - Formatted (JSON / form data)
+
+
+👉 Your password is not sent as plain text.
+ 
+### Step 3: Session Handling — Session Layer (5)
+- A session is created or reused
+- Maintains the connection between client and server
+👉 **Example:** Keeps track of your login request session.
+
+### Step 4: Breaking Data into Packets — Transport Layer (4)
+- Uses TCP (reliable)
+- Splits data into packets
+- Adds:
+  - Port number (e.g., 443 for HTTPS)
+  - Sequence numbers
+👉 Ensures all packets reach correctly.
+
+**Sequnce numbers**
+* When TCP splits your data (say, a login request) into multiple packets, each packet doesn't just carry a chunk of your data — it carries a TCP sequence number in its header. Here's what that actually means:
+
+* It's a byte counter, not a packet counter. TCP doesn't number packets 1, 2, 3... Instead, it numbers the bytes of data. So if your first packet carries bytes 0–999 of your message, its sequence number is 0 (or some random starting value + 0). The next packet, carrying bytes 1000–1999, gets sequence number 1000. And so on.
+* Why bytes and not packets? Because packets can arrive out of order, get duplicated, or get dropped on the internet. A byte-based sequence number lets the receiving side know exactly where each chunk fits into the original message, no matter what order the packets actually arrive in.
+* What it's used for on the receiving end:
+
+    * Reordering — if packet 3 arrives before packet 2, the receiver uses sequence numbers to put the data back in the correct order before handing it to the application.
+    * Detecting loss — if the receiver sees sequence numbers 0, 1000, then jumps to 3000, it knows the packet covering 2000–2999 is missing and can ask for it to be resent.
+    * Acknowledgment — the receiver sends back an ACK (acknowledgment) referencing the sequence number, confirming "I received up to byte X." This is how TCP guarantees reliable delivery.
+
+### Step 5: Routing — Network Layer (3)
+- Adds:
+  - Source IP (your device — your laptop)
+  - Destination IP (server)
+- Finds the best path to the server
+👉 Like Google Maps for data.
+
+### Step 6: Local Delivery — Data Link Layer (2)
+- Adds the MAC address
+- Handles communication inside the same local network (Wi-Fi/router)
+  
+### Step 7: Physical Transmission — Physical Layer (1)
+- Converts data into electrical signals / radio waves
+- Sends it through cable/Wi-Fi
+
+
+### The Reverse Happens on the Server Side
+The server receives the signal and travels back up: **Physical → ... → Application**.
+ 
+At the Application Layer, the server:
+- Reads the request
+- Verifies the username & password (database check)
+- Sends a response back down through the layers to you
+
+### Full Flow in One Line
+ 
+> Input → HTTP Request → Encryption → Session → TCP Packets → IP Routing → MAC Delivery → Signals → Server → Validate → Response back
+
+### Real Backend Mapping (Django Example)
+ 
+| OSI Layer | Real-World Component |
+|---|---|
+| Application | Django view (`/login`) |
+| Presentation | HTTPS (SSL/TLS handled by Nginx) |
+| Session | Django session / JWT |
+| Transport | TCP |
+| Network | IP routing (internet) |
+| Data Link | MAC (local delivery) |
+| Physical | Electrical signals / radio waves |
+| — | Response → Cookie or token |
+ 
+---
+
+## Reality vs. Theory: The Session Layer
+ 
+### In Theory (OSI Model)
+ 
+The **Session Layer** is said to:
+- Start the session
+- Maintain the session
+- End the session
+👉 This sounds like "connection management," which can be confusing, because in practice this job is split across two different real components.
+ 
+### In Reality (What Actually Happens)
+ 
+**✅ Connection management is handled by the Transport Layer (TCP):**
+- Keeps the connection alive
+- Handles:
+  - Packet order
+  - Retransmission
+  - Reliability
+👉 This is the real "connection manager."
+ 
+**✅ User session tracking is handled by the Application Layer (e.g., Django / backend):**
+- Stores login info
+- Uses cookies / session ID
+👉 This is user identity tracking, not connection management.
+ 
+---
+
+## IP Address vs. MAC Address
+ 
+Each device in a local network has **both**:
+- A **MAC address** (hardware identity)
+- An **IP address** (private IP — network identity)
+👉 You use the IP address to communicate, but the MAC address is used internally to actually deliver the data.
+ 
+> **MAC** = Media Access Control address
+ 
+| Property | IP Address | MAC Address |
+|---|---|---|
+| Type | Logical address (assigned by router/network) | Physical address (assigned by hardware) |
+| Used for | Internet routing | Local delivery |
+| Behavior across hops | Stays the same (end-to-end) | Changes at each hop |
+| Uniqueness | Unique per device ✅ (but may be shared publicly via NAT ❌) | Always unique ✅, not visible outside local network ❌ |
+ 
+**Key insight:**
+> IP is for decision (routing). MAC is for delivery (local handoff).
+
+* **"Behavior across hops"**
+  * Imagine your laptop sending a request to Google's server, passing through your router, then your ISP's router, then a few more routers, before reaching Google.
+  * **IP address — stays the same the whole way:**
+    ```py
+    Laptop → Router1 → Router2 → Router3 → Google
+    Source IP: YOUR_PUBLIC_IP   (same at every single hop)
+    Dest IP:   GOOGLE_IP        (same at every single hop)
+    ```
+    * The IP address is the "final destination label" — it doesn't change no matter how many routers the packet passes through. Every router just reads it to decide where to send it next, but never modifies it.
+  * **MAC address — gets replaced at every single hop:**
+    ```py
+    Laptop → Router1:        Source MAC = Laptop's MAC,  Dest MAC = Router1's MAC
+    Router1 → Router2:       Source MAC = Router1's MAC,  Dest MAC = Router2's MAC
+    Router2 → Router3:       Source MAC = Router2's MAC,  Dest MAC = Router3's MAC
+    Router3 → Google server: Source MAC = Router3's MAC,  Dest MAC = Google server's MAC
+    ```
+    * This is exactly what you read earlier in your notes: each router strips off the old frame (old MAC addresses) and builds a brand-new frame with new MAC addresses before forwarding to the next hop. MAC addresses only ever describe "the next physical neighbor," never the true original sender or true final destination — that's the IP address's job.
+* **"Uniqueness"**
+  * **IP address: "Unique per device ✅ (but may be shared publicly via NAT ❌)"**
+    * Inside your home network, your laptop, phone, and TV each get their own unique private IP (192.168.1.10, 192.168.1.11, etc.) — so far, unique per device, like it should be.
+    * BUT once they all go out to the internet, NAT makes them share one single public IP (your router's IP). So from the internet's point of view, your laptop and your phone look like they have the same IP address.
+    * That's the "❌" — uniqueness breaks down once you go outside the local network, because multiple real devices end up hiding behind one shared public IP.
+  * **MAC address: "Always unique ✅, not visible outside local network ❌"**
+    * The MAC address itself stays truly unique — no sharing, no NAT-style collapsing of multiple devices into one MAC. Your laptop's MAC is always just your laptop's MAC. That's the "✅."
+    * BUT the catch is different: it's not that MAC addresses become non-unique — it's that they never even leave your local network in the first place. The moment your data crosses your router, your MAC address gets stripped off and replaced (as shown above). So nobody outside your local network ever even sees your real MAC address to begin with. That's the "❌" — not a uniqueness problem, but a visibility problem.
+
+ 
+---
+
+## Why the Data Link Layer Is Needed
+ 
+**The problem:** Your laptop wants to send data to the internet, but you cannot directly reach every IP on the internet — the internet is made of many networks connected together. Your device is only directly connected to your local network (Wi-Fi/router), so it does **not** directly know the destination server's MAC address.
+ 
+**What actually happens:**
+ 
+### Step 1: Find the Next Hop (Router)
+Your laptop decides: *"I need to send this to my router first."*
+ 
+### Step 2: ARP (Address Resolution Protocol)
+Your device already knows it's router's IP (the **default gateway**), but not its MAC address:
+- Laptop asks: *"Who has this IP (router IP)? Give me your MAC address."*
+- Router replies: *"Here is my MAC address."*
+### Step 3: Frame Creation
+The Data Link Layer creates a **frame**, adding:
+- Source MAC → your laptop
+- Destination MAC → router
+### Step 4: Send Within the Local Network
+The frame is sent over Wi-Fi to the router. This is the Data Link Layer's job.
+
+* None of this involves the internet yet. ARP, in particular, only ever works locally — it can't ask "who has this IP" across the internet, only within the same local network.
+* The **default gateway** is just a technical name for your **router's local IP** address.
+
+## What Happens Inside the Router.
+ 
+### Step 1: Router Receives the Packet
+It looks at the destination IP.
+ 
+### Step 2: Router Checks Its Routing Table
+It asks: *"Do I know this network directly?"*
+ 
+**Case 1 — ✅ The destination IP is in the router's local network:**
+- Router says: *"This is my network."*
+- Sends the data directly using the MAC address.
+**Case 2 — ❌ The destination IP is NOT in the local network (the typical case):**
+- Router says: *"I don't know this directly → send to the next router."*
+- It uses its **default route**: *"If I don't know the destination, send everything to the ISP."*
+
+* default route's action is: "if I don't recognize the destination, send it to my ISP.
+
+### Full Flow Inside the Router
+ 
+1. **Routing decision** (Network Layer): Check the routing table using the destination IP.
+2. **Forwarding** (Data Link Layer): Create a new frame using MAC addresses.
+   - Destination MAC → next router's MAC address (e.g., ISP router)
+   - Source MAC → current router
+3. At each router along the path:
+   - Removes the previous frame's MAC addresses ❌
+   - Keeps the IP packet intact ✅
+   - Creates a brand-new frame with new MAC addresses ✅
+**Key takeaway:**
+> Decision = Network Layer (IP). Delivery = Data Link Layer (MAC).
+
+### Why Not Just Use IP Directly?
+ 
+At the hardware level (Ethernet/Wi-Fi), devices don't understand IP addresses — they only understand MAC addresses. So at every hop, the router:
+- Looks at the IP address (e.g., the destination server's IP) to decide where to send the data
+- Sends it to the next hop using that hop's MAC address
+
+## What the Server Actually Sees
+ 
+👉 **No** — previous MAC addresses are **not** preserved across the journey. Frames (Data Link Layer) are rebuilt at every hop:
+- Each router removes the old frame
+- Keeps the IP packet
+- Creates a new frame with new MAC addresses
+By the time the request reaches the destination server (e.g., Google):
+ 
+**Frame (Data Link Layer):**
+- ✅ Destination MAC → Server's MAC
+- ✅ Source MAC → Last router's MAC
+- ❌ NOT your laptop's MAC
+- ❌ NOT any intermediate routers' MACs
+**Packet (Network Layer):**
+- ✅ Source IP → Your public IP
+- ✅ Destination IP → Server's IP
+**What is NOT included in the IP packet:**
+- ❌ Intermediate router IPs
+- ❌ Path history
+- ❌ Any previous hop's IP
+---
+
+## NAT (Network Address Translation)
+ 
+### The Problem
+Multiple devices in your home (phone, laptop, TV) all share **one** public IP address from your router/ISP (e.g., Airtel, Jio). Individually:
+- Laptop ❌ not visible separately on the internet
+- Phone ❌ not visible separately
+- TV ❌ not visible separately
+👉 The server only sees the router's single public IP.
+ 
+### Why This Happens
+This is due to **NAT (Network Address Translation)**. The router:
+- Converts private IP → public IP
+- Keeps track of who sent what
+
+
+### How NAT Still Allows Correct Communication
+Even though all devices share one public IP, the router uses **port numbers** to tell them apart.
+ 
+**Example — NAT + Port Mapping:**
+ 
+| Device | Private IP | Private Port | Mapped to (Public) |
+|---|---|---|---|
+| Laptop | 192.168.1.10 | 5001 | 49.x.x.x:5001 |
+| Phone | 192.168.1.11 | 5002 | 49.x.x.x:5002 |
+ 
+**Request flow:**
+1. Laptop sends a request from `192.168.1.10:5001`
+2. Router converts it to its public address before forwarding
+
+### A Tricky Case: Same Private Port on Different Devices
+ 
+What if two devices use the *same* private port?
+- Laptop → `192.168.1.10:5001`
+- Tablet → `192.168.1.12:5001`
+👉 Same port (5001) on both — how does the router tell them apart?
+ 
+**First, fix a misunderstanding:** the port inside your local network (the private port) does **not** have to be unique across devices. Multiple devices can use the same private port number.
+
+### What NAT Actually Does (Real Logic)
+ 
+The router performs **Port Address Translation (PAT)**: it creates its **own** unique mapping for **each connection**, regardless of what private port was used.
+ 
+**Real NAT Table:**
+ 
+| Device | Private (IP:Port) | Public (IP:Port) |
+|---|---|---|
+| Laptop | 192.168.1.10:5001 | 49.x.x.x:6001 |
+| Tablet | 192.168.1.12:5001 | 49.x.x.x:6002 |
+ 
+👉 Notice: both devices used port `5001` internally ✅, but the router assigned them **different public ports** ❗
+
+### Response Handling
+When the server replies, when response reaches to the router ,that time checks its NAT table:
+- `6001` → `192.168.1.10:5001` -> routes the reply to the Laptop ✅
+- `6002` → `192.168.1.12:5001` ->  routes the reply to the Tablet ✅
+
+### One-Line Memory Aid
+> Private ports can clash, public ports cannot.
+
+:::info
+
+**Public port** cannot reliably or persistently tell which specific device sent them, because ports are temporary and assigned per-connection, not per-device.
+::::
+ 
+---
+
+## What a Server Can Learn From Your IP Address
+Using your public (source) IP, a server can determine general information:
+ 
+**🌍 General Info**
+- Country (e.g., India)
+- City (approximate)
+- ISP (e.g., Airtel, Jio)
+👉 This is called **IP geolocation**.
+
+### Important Real-World Case: Shared Home IP
+ 
+In most home networks, your IP is shared across all devices (phone, laptop, TV) via NAT — they all use the same public IP. So the server sees only one shared IP address, not individual devices.
+
+| | Shared or Unique? |
+|---|---|
+| **Public IP** | **Shared** — all your devices (phone, laptop, TV) go out to the internet using the exact same public IP, because they're all behind the same router |
+| **Public Port** | **Unique for connection** — for every active connection, the router assigns a different public port, so each device's traffic can be told apart |
+
+### Q :
+if all my devices share one public IP, how does a website still tell my phone apart from my laptop, or tell me apart from someone else on the same network (like at school or office Wi-Fi)?
+**ANS:**
+* Public IP tells the server which network the traffic came from (e.g., "this is someone on this specific home/school/office Wi-Fi")
+* Public IP + Public Port is the exact pair the router uses internally (via the NAT table) to know which device sent a specific request
+
+This part is accurate, and it's exactly how NAT works.Not the way the server identifying the user.
+
+### Problem 
+Where it breaks down for "the server identifying you"
+The problem is: the public port isn't stable or visible to the server in a way that's useful for identification.
+
+1. The port is temporary, and changes constantly
+
+Each new connection (or even a refreshed page) gets a new random public port from the router. Your laptop might use port 6001 for one request, then 6034 for the next, then 6102 for the one after that. There's no fixed "this port = this device" rule that persists. So even if the server logged the port for one request, it's useless for the next request — it'll be a different port.
+2. The server is never trying to map ports back to devices — only the router does that
+
+The NAT table you learned about is internal to your router, used only so replies get sent back to the right device on your local network. The server on the other end never sees or uses this table — it just sees "a request came from 49.x.x.x:6001" and replies to that same address. The server has no way (and no need) to peek inside your home network and go "ah, port 6001 means it was specifically the laptop."
+
+3. So from the server's point of view, port number ≠ device identity
+
+The server could technically notice "two different requests came from two different ports under the same IP," and guess "these are probably two different devices/tabs" — but it has no way to know which device is which, or whether it's the same device opening two tabs versus two separate devices. The port alone carries no identity information to the server — it's meaningful only to the router, transiently, for routing replies.
+
+So to directly answer your question:
+
+Using IP + port, the server can roughly tell "these requests are probably coming from different connections behind this one IP" — but it cannot reliably or persistently tell which specific device sent them, because ports are temporary and assigned per-connection, not per-device.
+
+### So How Do Websites Identify *You* Specifically?
+ 
+Since IP+Port alone can't distinguish between devices/users behind the same NAT, websites use:
+
+- **Cookies** — stored in the browser, used to track sessions/logins
+- **Login accounts** — username/password
+- **Device fingerprinting** — browser type, OS, screen size, etc.
+
+
+### Setting up scenario-1 
+
+Device 1 (say, your laptop) at office, IP 192.168.1.10
+Device 2 (say, your phone) at office, IP 192.168.1.20
+Both go through the same office router, sharing one public IP (say 49.x.x.x)
+Both log in with the same username/password (let's say it's the same Google account)
+
+**What happens, step by step**
+1. Device 1 sends a request
+
+Goes out as 192.168.1.10:5001
+Router does NAT: assigns public port 6001
+Leaves office as 49.x.x.x:6001
+Router's NAT table: 6001 ↔ Device 1 (192.168.1.10:5001)
+
+2. Device 2 sends a request (could be at the exact same moment)
+
+Goes out as 192.168.1.20:5050
+Router does NAT: assigns public port 6002 (a different port — it always picks a free one)
+Leaves office as 49.x.x.x:6002
+Router's NAT table: 6002 ↔ Device 2 (192.168.1.20:5050)
+
+3. Google's server receives both
+
+From Google's point of view, it received:
+
+Request A from 49.x.x.x:6001
+Request B from 49.x.x.x:6002
+
+Same IP, different ports — Google doesn't know or care these are "two different physical devices" — it just sees two separate connections, full stop.
+4. Google replies to each, individually
+
+Reply for Request A goes back to 49.x.x.x:6001
+Reply for Request B goes back to 49.x.x.x:6002
+
+5. Your office router routes each reply correctly
+
+Sees reply addressed to 6001 → NAT table says that's Device 1 → forwards to 192.168.1.10
+Sees reply addressed to 6002 → NAT table says that's Device 2 → forwards to 192.168.1.20
+
+### Setting up scenario-2
+
+One device (your laptop), one private IP: 192.168.1.10
+Tab 1: you open Google in one tab
+Tab 2: you open Google in another tab
+Same browser, same device, same private IP
+
+**What happens, step by step**
+1. Tab 1 makes a request
+
+Your OS/browser opens a new connection: 192.168.1.10:5001
+Router does NAT, assigns public port 6001
+Leaves your office as 49.x.x.x:6001
+NAT table: 6001 ↔ 192.168.1.10:5001 (Tab 1's connection)
+
+2. Tab 2 makes a request (even from the exact same device)
+
+Your OS picks a different local port for this new connection: 192.168.1.10:5002
+Router does NAT, assigns a different public port: 6002
+Leaves your office as 49.x.x.x:6002
+NAT table: 6002 ↔ 192.168.1.10:5002 (Tab 2's connection)
+
+The key thing happening here
+Even though it's the same device with the same private IP, your operating system assigns a different local port to every separate connection it opens — whether that's two tabs, two apps, or the same app opening two requests at once. This isn't something NAT or the router invents; it's just how TCP connections work in general: every connection gets its own unique combination of (local IP, local port, destination IP, destination port).
+So:
+
+Tab 1's connection: 192.168.1.10:5001 → Google
+Tab 2's connection: 192.168.1.10:5002 → Google
+
+These are two completely separate TCP connections, even though they're from the same device and same browser. Your OS keeps them apart locally, your router keeps them apart via NAT (different public ports), and Google's server keeps them apart as two independent connections too.
+3. Google replies to each separately
+
+Reply for Tab 1 → goes to 49.x.x.x:6001
+Reply for Tab 2 → goes to 49.x.x.x:6002
+
+4. Router forwards each reply correctly
+
+6001 → maps to 192.168.1.10:5001 → delivered to Tab 1's connection
+6002 → maps to 192.168.1.10:5002 → delivered to Tab 2's connection
+
+5. Your OS delivers each reply to the correct tab
+
+Your operating system/browser keeps its own internal table too — matching local port 5001 back to "Tab 1's connection" and 5002 back to "Tab 2's connection" — so the reply ends up rendering in the correct tab, not mixed up.
+---
+## Frames and Packets — Summary
+ 
+- **Frame** (Data Link Layer): the data format used for local delivery. A frame = your data + MAC addresses.
+- **Packet** (Network Layer): the data format that carries source and destination IP addresses; stays the same end-to-end, while frames are rebuilt at every hop.
+A **Router** is a device that connects a local network to other networks (e.g., the internet) — like a bridge or gate between networks. The Local Network includes the router itself, but the router is the special device inside that network that connects it to the outside world.
+ 
+**Private IP (Local Network):**
+- Used inside your local network
+- Not visible on the internet
+- Each device has a unique private IP and a unique MAC address
+**Public IP (Internet):**
+- Given to your router by your ISP
+- Used to communicate on the internet
+- All devices behind the router share this single public IP (via NAT)
+ 
+

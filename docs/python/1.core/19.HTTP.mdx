@@ -1,0 +1,321 @@
+A consolidated reference covering HTTP, HTTP Authentication, TCP, UDP, HTTPS, HTTP Headers, HTTP/2, and HTTP/3
+
+## 1. What is HTTP?
+
+**HTTP (HyperText Transfer Protocol)** is a protocol that allows communication between a **client (browser)** and a **server (website/API)**.
+- It follows a **request–response model**.
+- It is an **application layer protocol** - the topmost layer in networking, where the applications(browsers,code,APIs) communicate.This layer defines **how applications exchange data over network**.
+- HTTP itself is just the **set of rules for communication**- it doesn't handle the actual data processing.
+
+### Client-Server Model
+- **Client** -> Browser/mobile app
+- **Server** -> Web server(Django, Node.js, etc.)
+
+```
+Client → Request  → Server
+Client ← Response ← Server
+```
+
+### How a Web Request Works (End-to-End Flow)
+ 
+1. User types a URL.
+2. Browser resolves the server's IP address (via DNS).
+3. Browser sends an HTTP request.
+4. Server processes the request.
+5. Server sends back an HTTP response.
+6. Browser renders the page.
+
+### Origin and Purpose of HTTP
+ 
+- HTTP was created by **Tim Berners-Lee**, originally to transfer **hypertext documents (HTML)**.
+- **Hypertext** = text containing links (e.g., `<a href="/about">About</a>`). Clicking a link triggers a *new* HTTP request, and the server returns another HTML page — this is why it's called the **HyperText Transfer Protocol**.
+- **Today**, HTTP is no longer limited to hypertext. It transfers almost anything:
+  - JSON (APIs)
+  - Images, videos, files
+  - Any binary or text data
+
+### Final Understanding
+ 
+> HTTP is a stateless, application-layer protocol that enables communication between clients and servers using a request–response model. It was originally designed to transfer hypertext, but is now used to transfer all types of data.
+
+
+## 2. HTTP Request Structure
+ 
+A request has three parts: **Request Line**, **Headers**, and an optional **Body**.
+ 
+### 2.1 Request Line (Most Important)
+ 
+**Example:**
+```
+GET /home HTTP/1.1
+```
+ 
+It contains three components:
+ 
+| Component | Description | Example |
+|---|---|---|
+| **Method** | The action the client wants to perform | `GET`, `POST` |
+| **URL / Path** | The resource being requested | `/home`, `/api/users`, `/login` |
+| **HTTP Version** | The protocol version in use | `HTTP/1.1` |
+ 
+**Common HTTP Methods:**
+ 
+| Method | Purpose |
+|---|---|
+| **GET** | Fetch/retrieve data |
+| **POST** | Send/submit data |
+| **PUT** | Update existing data |
+| **DELETE** | Remove data |
+ 
+> `GET` essentially says "Give me this page"; `POST` says "Here is some data."
+ 
+### 2.2 Headers (Extra Information)
+ 
+Headers describe details *about* the request — they help the server understand and process it correctly.
+ 
+**Example:**
+```
+Host: example.com
+User-Agent: Chrome
+Content-Type: application/json
+Authorization: Bearer token123
+```
+ 
+What headers communicate:
+- Which browser/client is sending the request
+- What type of data is being sent
+- Authentication info (tokens, cookies)
+- Language preferences
+*(See [Section 8: HTTP Headers](#8-http-headers-in-detail) for a full breakdown of individual headers.)*
+ 
+### 2.3 Body (Optional)
+ 
+The body carries the **actual data sent to the server**. It is mainly used with `POST` and `PUT` requests — e.g., login forms, API submissions, file uploads.
+ 
+**Example:**
+```json
+{
+  "username": "john",
+  "password": "1234"
+}
+```
+ 
+### Full Request Example
+ 
+```
+POST /login HTTP/1.1
+Host: example.com
+Content-Type: application/json
+ 
+{
+  "username": "john",
+  "password": "1234"
+}
+```
+ 
+---
+ 
+## 3. HTTP Response Structure
+ 
+A response also has three parts: a **Status Line**, **Headers**, and an optional **Body**.
+ 
+![HTTP response structure showing Status Line, Headers, and Body]
+ 
+### 3.1 Status Line (Very Important)
+ 
+**Example:**
+```
+HTTP/1.1 200 OK
+```
+ 
+It contains three parts:
+ 
+| Component | Description | Example |
+|---|---|---|
+| **HTTP Version** | Protocol version used | `HTTP/1.1` |
+| **Status Code** | Numeric result code | `200` |
+| **Reason Phrase** | Human-readable status text | `OK` |
+ 
+So `200 OK` simply means "everything is fine."
+ 
+### 3.2 Headers (Metadata)
+ 
+Headers describe metadata about the response.
+ 
+**Example:**
+```
+Content-Type: text/html
+Content-Length: 1500
+Date: Mon, 01 Jan 2026
+```
+ 
+What they tell the browser:
+- Type of data returned (HTML / JSON / Image)
+- Size of the data
+- Server information
+- Cookies
+In short: headers help the browser decide *"how should I handle this data?"*
+ 
+### 3.3 Body (Actual Data)
+ 
+The real content sent by the server — HTML, JSON, an image, etc. The body may sometimes be **empty** (e.g., in certain error responses).
+ 
+### Full Response Example
+ 
+```
+## 4. HTTP Status Codes
+ 
+| Range | Meaning | Example |
+|---|---|---|
+| **1xx** | Informational | — |
+| **2xx** | Success | `200 OK` |
+| **3xx** | Redirect | `302 Found` |
+| **4xx** | Client error | `404 Not Found` |
+| **5xx** | Server error | `500 Internal Server Error` |
+ 
+Notable codes covered elsewhere in this document:
+- `401 Unauthorized`, `403 Forbidden`, `407 Proxy Authentication Required` — see [HTTP Authentication](#5-http-authentication)
+- `304 Not Modified` — see [Caching Headers](#82-caching-headers-performance)
+---
+
+## 5. HTTP Authentication
+ 
+**HTTP Authentication** is a security mechanism used to verify whether a user is allowed to access a web resource (webpage, API, etc.). It works through **HTTP headers** exchanged between client and server, following a **Challenge → Response** model.
+ 
+**Why it's needed:** websites store sensitive data (user info, payment details, etc.), so the server must ensure only authorized users can access it.
+ 
+### 5.1 Authentication Flow (Step-by-Step)
+ 
+1. **Client Request** — The client requests a resource; the server doesn't yet know who the client is.
+**First request — no credentials sent:**
+```
+GET /profile HTTP/1.1
+Host: example.com
+```
+2. **Server Challenge** — The server responds with status **`401 Unauthorized`** and a `WWW-Authenticate` header, meaning "you must authenticate to access this resource."
+**Server says "who are you?":**
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Basic realm="Access to site"
+```
+3. **Client Sends Credentials in request header** — The client resends the request with an `Authorization` header containing credentials.
+```
+   GET /profile HTTP/1.1
+    Host: example.com
+    Authorization: Basic YWRtaW46MTIzNA==
+```
+4. **Server Verifies** — The server checks the username/password or token.
+5. **Final Response**:
+   - ✅ Valid → Access granted
+   - ❌ Invalid → `403 Forbidden`
+
+|**Behavior**|**When**|
+|Wait for 401, then send credentials|Default — client doesn't know auth is needed|
+|Send credentials upfront (**preemptive authentication**)|Client already knows auth is required (e.g., previously visited, or explicitly configured)|
+
+* `401- Unauthorized` - Not Authenticated
+* `403- Forbidden` - Authenticated but not authorized
+
+
+### 5.2 Normal Authentication vs. Proxy Authentication
+ 
+Whether you face *normal* or *proxy* authentication depends on the **network setup**, not just the server.
+ 
+| | Normal Authentication | Proxy Authentication |
+|---|---|---|
+| **Decided by** | The actual backend server | The proxy server (network infrastructure) |
+| **Occurs when** | Accessing a website/API directly | Behind a proxy (office Wi-Fi, corporate network, VPN) |
+| **Status code** | `401 Unauthorized` | `407 Proxy Authentication Required` |
+| **Header used** | `WWW-Authenticate` | `Proxy-Authenticate` |
+| **Credentials header** | `Authorization` | `Proxy-Authorization` |
+| **Message** | "Authenticate yourself" | "First authenticate with me before I forward your request" |
+ 
+**What is a Proxy Server?** A proxy server acts as a **middleman** between the client and the internet (e.g., company networks, school Wi-Fi, some VPNs). It controls and monitors requests on the client's behalf.
+ 
+**Proxy Authentication Flow:**
+1. Client sends a request, e.g., `GET https://example.com`.
+2. Proxy intercepts and responds: `407 Proxy Authentication Required` with `Proxy-Authenticate: Basic realm="Proxy"`.
+3. Client resends the request with `Proxy-Authorization: Basic <credentials>`.
+4. Proxy verifies the credentials.
+5. Proxy forwards the (now authenticated) request to the actual server **on the client's behalf** (the proxy server proxies as client,so server thinks the request really coming from the client but it is really from proxy server).
+6. The actual server responds normally — and may or may not require its own separate authentication.
+
+```
+You  →  Proxy  →  Actual Server
+         ↑
+    proxy says to server:
+    "Give me google.com"
+    (but it's really YOU who wants it)
+
+```
+
+### 5.3 Key Authentication Headers
+ 
+| Header | Direction | Purpose |
+|---|---|---|
+| `WWW-Authenticate` | Response (server → client) | Server Tells the client how to authenticate. Format: `<type> realm=<realm>` |
+| `Proxy-Authenticate` | Response (proxy → client) | Same as above, but for proxy authentication |
+| `Authorization` | Request (client → server) | Carries the client's credentials, e.g., `Authorization: Basic YWxhZGRpbjpvcGVuc2VzYW1l` |
+| `Proxy-Authorization` | Request (client → proxy) | Carries credentials for the proxy  eg: `Proxy-Authorization: Basic YWxhZGRpbjpvcGVuc2VzYW1l`| 
+ 
+- `<type>` specifies the authentication scheme used. eg:Basic,Bearer etc
+- `<realm>` describes the scope/area of security being protected.
+
+**Response header that server sends back**
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Basic realm="Admin Area"
+                  ↑      ↑
+               `<type>`   realm=`<realm>`
+```
+**Client sends credentials**
+```
+GET /admin HTTP/1.1
+Authorization: Basic YWRtaW46MTIzNA==
+```
+### 5.4 Encoding vs. Encryption (Important Distinction)
+ 
+**Encoding** converts data into another format for safe transmission/storage. It is **not** meant for security — it's purely about formatting, and is trivially reversible.
+ 
+> Example (Base64): `admin:1234` → encodes to → `YWRtaW46MTIzNA==`
+> This is exactly what gets sent in Basic Auth: `Authorization: Basic YWRtaW46MTIzNA==`
+> Anyone can decode it straight back to `admin:1234` — hence: **Encoding ≠ Security.**
+ 
+**Encryption** converts data into a secure format that *cannot* be read without a key. It requires a key, is hard to reverse without it, and is genuinely used for security.
+ 
+> Example: `admin:1234` → encrypted → `8fj3k2j9skd92k...` (unreadable without the decryption key)
+ 
+### 5.5 Types of HTTP Authentication Schemes
+ 
+| Scheme | How it works | Security Level |
+|---|---|---|
+| **Basic** | Username + password, Base64-encoded (not encrypted) | 🔴 Low — use only over HTTPS |
+| **Digest** | Uses a nonce value + MD5 hashing; password isn't sent directly | ⚠️ Medium |
+| **Bearer (Token-based)** | Uses tokens instead of passwords (e.g., JWT); common in APIs: `Authorization: Bearer <token>` | ✅ High |
+| **NTLM** | Microsoft protocol; authenticates without sending credentials directly; used in Windows environments | ✅ High |
+| **Negotiate** | Advanced version of NTLM using **Kerberos**; faster and more secure | ✅ High |
+ 
+> 👉 Always use **HTTPS** for any authentication scheme, since plain HTTP sends data unencrypted.
+ 
+### 5.6 Authentication vs. Authorization
+ 
+| | Authentication | Authorization |
+|---|---|---|
+| **Question answered** | "Who are you?" | "What can you access?" |
+| **Checks** | Identity (credentials) | Permissions — which resources/actions a user can perform |
+ 
+### Summary
+ 
+- HTTP Authentication secures web resources using **headers + status codes**, based on a **challenge–response** model.
+- Multiple schemes exist with different security levels.
+- Real-world examples: admin panel logins, API token access, browser login pop-ups.
+- Always use HTTPS for safety.
+---
+HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Length: 20
+ 
+<h1>Hello</h1>
+```
+ 
+---

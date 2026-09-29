@@ -1,0 +1,612 @@
+Multithreading in Python allows multiple threads(smaller units of process) to run concurrently,enabling efficeint multitasking.It is very usefull for I\O bound taks like file handling,network requests,or user interactions.
+
+## What is a Process?
+A process is an executing program with
+* Program code (instruction to run)
+* Data(variables,buffers,workspace)
+* Excecution context(state of the process)
+
+**buffer** - It is temporary storage room used while data is being processed or transferred.
+This buffer can temporarily hold:
+* Data read from a file
+* Neywork packets
+* User input
+
+**Workpsace** - A workspace is memory used by a program as temporary working area while performing calculations or tasks.
+
+Example:
+* Intermediate results memory during computations
+* Temporary arrays memory during sorting
+
+## What is a Thread?
+A thread is a smallest unit of execution inside a process.
+* A process can have multiple threads
+* Threads share the same code and global data but have their own registers and local variables(stack).
+* Think of thread as lightweight subprocess
+  
+* A process is managed by a PCB(process control block).
+* Each thread is managed by TCB(Thread control block) and linked to its process.
+* Threads share the process's code and data but threads have their own stacks.
+
+
+## Working of Multithreading
+* On single-core CPUs, Python achieves the concurrency using context switching
+* This makes threads appear to run in parellel but actually not(multitasking)
+* Multiple tasks help in performing background tasks without blocking the main program.
+* A single thread process execute only one task at a time.
+* A multithreaded process can run multiple tasks in parallel by having separate stacks/registers for each thread, but sharing the same code and data.
+
+
+### Threading in Python
+
+Python provides the **threading** module to work with threads.
+
+```py
+import threading
+import time
+
+def square(num):
+    print(f"Square: {num*num}")
+    time.sleep(1)
+
+def cube(num):
+    print(f"Cube: {num*num*num}")
+    time.sleep(1)
+
+t1 = threading.Thread(target=square, args=(4,))
+t2 = threading.Thread(target=cube, args=(4,))
+
+t1.start()
+t2.start()
+t1.join() #wait for completion
+t2.join()
+
+print("Done!")
+
+```
+
+### ThreadPoolExecutor
+The concurrent.futures.ThreadPoolExecutor makes it easier to manage multiple threads without manually creating them.
+```py
+from concurrent.futures import ThreadPoolExecutor
+
+def worker(task):
+    print(f"Task {task} running")
+
+with ThreadPoolExecutor(max_workers=2) as executor:
+    executor.submit(worker,1)
+    executor.submit(worker,2)
+
+```
+
+**Explanation**
+* Creates a thread pool with 2 worker threads.
+* Submits two tasks to run in parallel.
+* Each task prints a message (Task 1 running, Task 2 running).
+* The thread pool manages execution and shuts down automatically.
+
+## Need of ThreadPool
+* Spawning new threads will becomes problematic if we are dealing with many threads.It is computationally inefficeint to create so many threads which will leads to decline the throughput(efficeincy).An approach to keep up throughput is to create and instantiate a pool of idle threads before and reuse the threads from this pool until all the threads are exhausted.
+* Also the pool keeps track and manages the threads lifecycle and schedules them on the programmers behalf(instead), thus making the code much simpler and less buggy.
+
+```
+**Syntax**
+concurrent.futures.ThreadPoolExecutor(max_workers=None,thread_name_prefix="",initializer=None,initargs=())
+
+```
+**Parameters**
+* **max_wokers** : It is number of threads (threadpool size),from python 3.8 onwards default value is 32.Out of this 5 threads are preserved for I\O bound task.
+* **thread_name_prefix**: It is added from 3.6 onwards to give the name of thread for easier debugging purpose.
+* **initializer** : Initializer takes a callable ,which invoked in the start of every worker thread
+* **initargs**: It is a tuple of args passed to initializer.
+
+### ThreadPoolExecutor Methods:
+1. **sumbit(fn,*args,**kwargs)**
+It runs a callable or method and returns a Future object representing the execution state of the method.
+2. **map(fn,*iterable,timeout=None,chunksize=1)**
+* It maps the method and iterable together immediately and will raise an exception concurrent.futures.TimeoutError if it fails to do so within the timeout limit.
+* If the itrable is so large, then having chunksize > 1 can improve performance using ProcessPoolExecutor with ThreadPoolExecutor it has no such adavantage ,ie it can aleft to its default value
+3. **shutdown(wait=True,*,cancel_futures=False)**
+* It signals the executor to free up all resources when the future is done executing.
+* It must be called after executor.submit() or executor.map() else it would throw RUntimeError.
+* wait=True makes the method not to return until execution of all threads is done and resource are freed up.
+* cancel_futres=True , then the executor will cancel all the future threads that are yet to start.
+
+Example
+
+```py
+from unittest import result
+from concurrent.futures import ThreadPoolExecutor
+from time import sleep
+
+values=[3,4,5,6]
+
+def cube(x):
+    print(f"Cube of {x}:{x*x*x}")
+    
+if __name__=="__main__":
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        executor.submit(cube,2)
+        executor.map(cube,values)
+
+```
+Example: Single thread vs MultiThreaded 
+
+```py
+from concurrent.futures import ThreadPoolExecutor
+import time
+
+from httpx import request
+import requests
+
+img_urls = [
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623210949/download21.jpg',
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623211125/d11.jpg',
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623211655/d31.jpg',
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623212213/d4.jpg',
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623212607/d5.jpg',
+    'https://media.geeksforgeeks.org/wp-content/uploads/20190623235904/d6.jpg',
+]
+
+t1=time.perf_counter()
+def download_image(img_url):
+    requests.get(img_url).content
+    print("Downloading----")
+    
+for img in img_urls:
+    download_image(img)
+    
+    
+t2=time.perf_counter()
+
+print(f"Single Threded:{t2-t1}")
+
+print("---------------------------------------------------------")
+
+t1=time.perf_counter()
+def download_image(img_url):
+    requests.get(img_url).content
+    print("Downloading----")
+    
+with ThreadPoolExecutor(max_workers=3) as exec:
+    exec.map(download_image,img_urls)
+    
+t2=time.perf_counter()
+
+print(f"Single Threded:{t2-t1}")
+
+
+```
+output
+
+```
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Single Threded:4.0674544350004
+---------------------------------------------------------
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Downloading----
+Single Threded:0.16370929699951375
+
+```
+
+## Synchronization between threads
+Thread synchronisation is defined as a mechanism which ensures that two or more concurrent threads do not simultanously execute some particular program segment called **critical section**
+* **Critical section** is the part of the program where shared resource is accessed.
+* Concurrent accesses to shared resource can lead to **race condition**.
+* A race condition occurs when two or more threads can access shared data and they try to change it at the same time.As a result the values of the variables may be unpredictable and vary depending on the timings of context switches of the processes.
+
+```py
+import threading
+
+# global variable x
+x = 0
+
+def increment():
+    """
+    function to increment global variable x
+    """
+    global x
+    x += 1
+
+def thread_task():
+    """
+    task for thread
+    calls increment function 100000 times.
+    """
+    for _ in range(100000):
+        increment()
+
+def main_task():
+    global x
+    # setting global variable x as 0
+    x = 0
+
+    # creating threads
+    t1 = threading.Thread(target=thread_task)
+    t2 = threading.Thread(target=thread_task)
+
+    # start threads
+    t1.start()
+    t2.start()
+
+    # wait until threads finish their job
+    t1.join()
+    t2.join()
+
+if __name__ == "__main__":
+    for i in range(10):
+        main_task()
+        print("Iteration {0}: x = {1}".format(i,x))
+
+```
+output
+
+```
+Output:
+Iteration 0: x = 175005
+Iteration 1: x = 200000
+Iteration 2: x = 200000
+Iteration 3: x = 169432
+Iteration 4: x = 153316
+Iteration 5: x = 200000
+Iteration 6: x = 167322
+Iteration 7: x = 200000
+Iteration 8: x = 169917
+Iteration 9: x = 153589
+```
+
+In above program:
+* Two threads t1 and t2 are created in main_task function and global variable x is set to 0.
+* Each thread has a target function thread_task in which increment function is called 100000 times.
+* increment function will increment the global variable x by 1 in each call.
+* The expected final value of x is 200000 but what we get in 10 iterations of main_task function is some different values. This happens due to concurrent access of threads to the shared variable x. This unpredictability in value of x is nothing but race condition
+
+::::note
+Even with GIL sometimes you need lock,
+```py
+x = 0
+
+Thread A: read x -> 0
+(Thread switch)
+
+Thread B: read x -> 0
+Thread B: write 1
+
+(Thread switch)
+
+Thread A: write 1
+```
+Expected 
+`
+2
+`
+
+Actual
+`
+1
+`
+
+This is the race condition even with GIL
+
+Therefore you still need lock
+```py
+lock = threading.Lock()
+
+with lock:
+    x += 1
+
+```
+**Then what does the GIL protect?**
+
+The GIL mainly protects **CPython's internal interpreter data structures**.
+
+Without the GIL, operations like reference counting would require much more synchronization inside the interpreter.
+
+The GIL is for **interpreter safety**, not for **   **.
+
+::::
+
+## Using Locks
+
+Threading module provides a **lock** class to deal with the race conditions.
+* The lock is implemented using the **semaphore** object provided by OS.
+`
+A semaphore is a synchronization object that controls access by multiple processes/threads to a common resource in a parallel programming environment. It is simply a value in a designated place in operating system (or kernel) storage that each process/thread can check and then change. Depending on the value that is found, the process/thread can use the resource or will find that it is already in use and must wait for some period before trying again. Semaphores can be binary (0 or 1) or can have additional values. Typically, a process/thread using semaphores checks the value and then, if it using the resource, changes the value to reflect this so that subsequent semaphore users will know to wait.
+`
+
+**Lock** class provides following methods:
+* **acquire([blocking])** : To acquire a lock. A lock can be blocking or non-blocking.
+  * When invoked with the blocking argument set to **True**(the default),thread execution is blocked until the lock is unblocked,then lock is set to locked and return **True**.
+  * When invoked with the blocking set to **False**, thread execution is not blocked. If lock is unlocked,then set it locked and return **True** else return **False** immediately.
+* **release()**: To release a lock.
+  * When the lock is locked, reset it to unblocked, and return. If any other threads are blocked waiting for the lock to become unlocked,allow exactly one of them to proceed.
+  * if lock is already unlocked, a **ThreadError** is raised.
+
+```py
+import threading
+
+# global variable x
+x = 0
+
+def increment():
+    """
+    function to increment global variable x
+    """
+    global x
+    x += 1
+
+def thread_task(lock):
+    """
+    task for thread
+    calls increment function 100000 times.
+    """
+    for _ in range(100000):
+        lock.acquire()
+        increment()
+        lock.release()
+
+def main_task():
+    global x
+    # setting global variable x as 0
+    x = 0
+
+    # creating a lock
+    lock = threading.Lock()
+
+    # creating threads
+    t1 = threading.Thread(target=thread_task, args=(lock,))
+    t2 = threading.Thread(target=thread_task, args=(lock,))
+
+    # start threads
+    t1.start()
+    t2.start()
+
+    # wait until threads finish their job
+    t1.join()
+    t2.join()
+
+if __name__ == "__main__":
+    for i in range(10):
+        main_task()
+        print("Iteration {0}: x = {1}".format(i,x))
+
+
+```
+output
+```
+Iteration 0: x = 200000
+Iteration 1: x = 200000
+Iteration 2: x = 200000
+Iteration 3: x = 200000
+Iteration 4: x = 200000
+Iteration 5: x = 200000
+Iteration 6: x = 200000
+Iteration 7: x = 200000
+Iteration 8: x = 200000
+Iteration 9: x = 200000
+```
+
+**Adavantages**
+* It doesn't block the user.This is because threads are independent of each other.
+* Better use of system resource is possible since threads execute tasks concurrently.
+* Enhanced performance on multi-processor machines.
+* Multi-threaded servers and interactive GUIs use multithreading exclusively.
+
+**Disadvantages**
+* As number of threads increases, complexity increases.
+* Sychronizastion of shared resource is necessary.
+* It is difficult to debug,result is sometimes unpredictable.
+* COnstructing and synchronizing threads is CPU/memory intensive.
+
+## Rlock and lock
+
+When working with multithreading in Pyhton, Lock and RLock are two commonly used synchronization mechanism to ensure mutual exclusion.
+* **Mutual exclusion (Mutex)**: At any given time only one thread is allowed to access a shared resource or execute a critical section of code.
+* Both are part of the threading module ,but behave differently.
+* The key difference between them is **Lock** can only be acquired **once by a thread**(A thread cannot acquire the same Lock again while it already holds it.),Whereas **Rlock** allows the same thread can acquire the thread multiple times.
+
+```py
+import threading
+
+lock=threading.Lock()
+lock.acquire()
+print("lock acqiured")
+lock.acquire() #makes problem
+
+lock.release()
+
+rlock=threading.RLock()
+rlock.acquire()
+rlock.acquire()
+rlock.release()
+rlock.release()
+
+```
+* threading.Lock() initializes the lock, lock.acquire() acquires it and lock.release() releases it for other threads.
+* threading.RLock() initializes an RLock, rlock.acquire() acquires it twice and rlock.release() releases it twice.
+
+## What is a Lock?
+A Lock is a synchronization tool provided by the threading module in Python.
+* It is used to ensure only one thread can access a shared resource at a time.
+* Features
+  * **Mutual Exclusion**: Only one thread can hold the lock at a time.
+  * **Blocking behavior** : Threads attempting to acquire a locked lock will wait until its released.
+  * **No Reentrant** : A thread cannot acquire the same lock twice without releasing it,leading to deadlock.
+
+```py
+import threading
+
+lock = threading.Lock()
+geek = 0 # global variable
+
+def fun(value):
+    global geek
+    with lock:
+        geek += value
+        
+fun(1)
+fun(2)
+
+print(geek)
+
+```
+* using with lock to ensure mutual exclusion, so only one thread can update geek at a time.
+  
+## What is RLock(Reentrant Lock)?
+An Rlock is a specialized type of threading module, that allows a thread to acquire the same lock multiple times without causing deadlock.
+* It is designed to solve the problem of reetrancy , Where a thread may need to acquire a lock again while already holding it.
+* Features
+  * **Reentrant**: A thread can acquire the lock multiple times without blocking itself.
+  * **Acquisation counter**: Rlock counts how many times it's acquired by the same thread.
+  * **Release requirement** : The thread must call **release()** the same number of times it called **acquire** to fully release lock.
+```py
+import threading
+
+geek = 0
+rlock = threading.RLock()
+
+def fun():
+    global geek
+    rlock.acquire()  # First acquisition
+    geek += 1
+    rlock.acquire()  # Second acquisition
+    geek += 2
+    rlock.release()  # Release first
+    rlock.release()  # Release second
+
+thread = threading.Thread(target=fun)
+thread.start()
+thread.join()
+
+print(geek)
+
+```
+## Difference between Lock and Rlock
+
+|Feature|Lock|Rlock|
+|:---|:---|:---|
+|**Reacquire Lock**|Cannot be reacquired by the same thread|Can be reacuired multiple times by the same thread|
+|**Releasing lock**|Can be releasing by any thread|Can only be releasing by acuired thread|
+|**ownership**|Owned by one thread at a time|Owned by acquiring thread,multiple times|
+|**Execution speed**| Faster execution|Slower due to tracking acquisition count|
+
+
+## Communicating between threads 
+### Queue
+
+Given multiple threads in the program, one thread wants to safely communicate data between them.
+* The safest way to send data from one thread to another is to use Queue from the queue library.
+* TO do this create a thread instance which is shared between threads.
+* Threads then use .put() and .get() operations to add or remove items from the queue.
+* Queue instances already have all of the required locking,so they can be safely shared by as many threads as per requirement.
+* When using queues, it can be tricky for shutdown of the producer and consumer
+```py
+from queue import Queue
+from threading import Thread
+
+# A thread that produces data
+def producer(out_q):
+    while True:
+        # Produce some data
+        ...
+        out_q.put(data)
+        
+# A thread that consumes data
+def consumer(in_q):
+    while True:
+        # Get some data
+        data = in_q.get()
+        # Process the data
+        ...
+        
+# Create the shared queue and launch both threads
+q = Queue()
+t1 = Thread(target = consumer, args =(q, ))
+t2 = Thread(target = producer, args =(q, ))
+t1.start()
+t2.start()
+```
+### Queue-sentinel value
+* A common solution to this problem is sentinel value.
+```py
+from queue import Queue
+from threading import Thread
+
+# Object that signals shutdown
+_sentinel = object()
+
+# A thread that produces data
+def producer(out_q):
+    while running:
+        # Produce some data
+        ...
+        out_q.put(data)
+
+    # Put the sentinel on the queue to indicate completion
+    out_q.put(_sentinel)
+
+
+# A thread that consumes data
+def consumer(in_q):
+    while True:
+        # Get some data
+        data = in_q.get()
+        
+        # Check for termination
+        if data is _sentinel:
+            in_q.put(_sentinel)
+            break
+        ...
+```
+* The feature of above code is the consumer, upon receiving the sentinel value, immediately places it back onto the queue.This propagates the sentinel to other consumers threads that might be listening on the same queue,Thus shutting them all down one after the other.
+### Queue :completion features
+* The thread communication is one-way process and non-deterministic process.So there is no way to know when receiving threas has actually received a message and worked on it.
+* However Queue objects do provide some basic completion features **task_done() and join()**.
+
+```py
+from queue import Queue
+from threading import Thread
+
+# A thread that produces data
+def producer(out_q):
+    while running:
+        # Produce some data
+        ...
+        out_q.put(data)
+        
+# A thread that consumes data
+def consumer(in_q):
+    while True:
+        # Get some data
+        data = in_q.get()
+        # Process the data
+        ...
+        # Indicate completion
+        in_q.task_done()
+        
+# Create the shared queue and launch both threads
+q = Queue()
+t1 = Thread(target = consumer, args =(q, ))
+t2 = Thread(target = producer, args =(q, ))
+t1.start()
+t2.start()
+
+# Wait for all produced items to be consumed
+q.join()
+
+```
+* Instead of Queue for Thread communication we can build own data structures as long as one adds required locking and synchronization.
+
+**[ Thread communication -part-2 - pending- geeksforgeeks]**
+
+
+

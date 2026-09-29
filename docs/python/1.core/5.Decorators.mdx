@@ -1,0 +1,396 @@
+## 1- Why Function is First class in Python 
+
+* **First class** means **Full status**
+* ### The History : Why "First" ?
+  * In Older programming language (c or old java, old C++) variable like int, str, float were "First Class" because of full status.You could do anything with that.Function however treated like "Second Class" conecpt
+  * Second class restricts are
+     * You could call function
+     * You couldnot pass function as argument
+     * You could not return function
+     * You could not dynamically create a function inside another function.
+  * So when say Python has  "Fisrt Class Function", Function is not restricting Second class here.They have achieved **Fisrt Class**  status , meaning they have the exact same rights and abilities as regular integer or string.
+  
+## 2- Decorators
+* Because of functions are first class objects. Means functions can be passed around around as arguments, returned from another function and assigned to variables.
+* A decorator is simply a function that takes another function as arguments, adds some functionality and returns a modified function.
+* ### The syntax
+   * Before using ```@``` syntax,
+      ```py
+      def my_decorator(func):
+         def wrapper():
+            print("1. Something happend before the function is called.")
+            func()
+            print("2. Something happened after the function is called")
+
+         return wrapper
+
+      def say_hello():
+         print("Hello!")
+
+      #Decorating say_hello function manually
+      say_hello=my_decorator(say_hello)
+      #Calling the decorated say_hello function
+      say_hello()
+
+      ```
+   * The elegant way: 
+    ```py
+    @my_decorator
+    def say_hello():
+      print("Hello!")
+
+   say_hello()
+
+   ```
+   **Output**
+
+   ```
+   1. Something happend before the function is called.
+   Hello!
+   2. Something happend after the function is called.
+
+   ```
+
+## 3- ```functools``` module
+
+* While decorators are amazing, they have some side effect. And where ```functools``` comes to rescue. Two of its most popular tools are ```wraps``` and ```lru_cache```
+
+### A. ```functools.wraps``` decorator (The identity Preserver)
+ When we wrap a function , it accidentally loses its original identity (like name and docstring) and takes identity on ```wrpper``` function.
+   * It is a built-in decorator.
+   ```py
+   print(say_hello.__name__) # output : wrapper (OOps! We lost the 'say_hello')
+   ```
+  * To fix this , Python provides ```functools.wraps``` which copy pastes the original function's metadata back onto the ```wrapper``` function.
+  * When python calls  ```functools.wraps(func)``` it will copy all the metadata of func and pastes(over writes) onto ```wrapper``` function.
+  ```py
+  import functools
+
+   def my_decorator(func):
+      @functools.wraps(func)  # <--- Keeps the original function's identity intact
+      def wrapper(*args, **kwargs):
+         return func(*args, **kwargs)
+      return wrapper
+  ```
+   * NOTE : Always use ```@functools.wraps``` when writing custom decorators to keep the debugging and loggin the same.
+    
+### B. ```functools.lru_cache```  (The Performace Booster)
+
+* ```lru_cache``` Least Recently used cache
+* It is built-in decorator
+* It memorizes the result of a function. If a function is called again with exact same arguments, **it skips the execution and returns the cache result**.
+* This is very useful for expensive and recursive calculations , like Fibinocci series.
+  
+  ```py
+   from functools import lru_cache
+
+   @lru_cache(maxsize=128) #  Caches upto 128 unique cells
+   def fibonacci(n):
+      if n<2:
+         return n
+      return fibonacci(n)+fibonacci(n-2)
+
+   print(fibonacci(50)) #  Calcultes instantly
+   
+  ```
+
+### C. ```functools.partial``` (The Argument Lock)
+
+* It is not a decorator itself.
+* ```partial``` lets you freeze a subset of a function's arguments and create a new, simpler function outf of it.
+  
+```py
+from functools import partial 
+
+def multiply(x,y):
+   return x*y
+
+#Creates a functions that always doubles the input.
+double=partial(multiply,2)
+
+print(double(5)) # Output :10 (Equivalent to multiply (2,5))
+
+```
+
+
+### Summary 
+
+|Tools|Description|
+|:--|:--|
+|Custom Decorators | Logging, timing of code execution, enforcing user authentication|
+|```functools.wraps```|Ensuring the custom decorator won't break the function's metadata|
+|```@functools.lru_cache```| Speeding up heavy algorithms or repetitive API/database calls |
+|```functools.partial```| Reusig the functions with fixed default parametrs in specific context.
+
+## 4. Decorator with Parameters
+* Decorators often needs to work with functions which has parameters.
+* We use *args and **kwargs so our wrapper can accept any number of arguments.
+  
+```py
+
+def decorator_name(func):
+   def wrapper(*args,**kwargs):
+      result=func(*args,**kwargs)
+      return result
+   return wrapper
+
+@decorator_name
+def add(a,b):
+   return a+b
+
+```
+
+ #### Higher-Order Function
+* Higher order functions are functions that either take other functions as input, return a function as output, or both.
+* example 
+  ```py
+  def fun(f,x):
+    return f(x)
+   
+   def square(x):
+      return x*x
+
+   res=fun(square,5)
+   print(res)#25
+
+  ```
+## 5. Types of Decorators
+
+
+### 1. Function Decorators 
+Used to wrap and enhance functions by adding extra behavior before or after the original function runs.
+
+
+```py
+
+def simple_decorator(func):
+    def wrapper():
+        print(">>> Staring function")
+        func()
+        print(">>> FUnction finished")
+    return wrapper
+
+@simple_decorator
+def greet():
+    print("Hello")
+
+greet()
+
+```
+
+### 2.Method Decorators
+
+* Special decorators used for methods in a class.
+* They work like function decorator but handle self parameters for instance methods.
+* eg: Here the decorator prints a message before and after a method is executed, while correctly handling self argument.
+
+```py
+
+def method_decorator(func):
+    def wrapper(self,*args,**kwargs):
+        print("Before")
+        func(self,*args,**kwargs)
+        print("After")
+      return wrapper
+
+class MyClass:
+    @method_decorator
+    def say_hello(self):
+        print("Hello!")
+
+obj=MyClass()
+obj.say_hello()
+
+```
+
+Output
+
+```
+Before
+Hello!
+After
+
+```
+
+### 3. Class Decorators
+* It is used to modify the behavior of a class.
+* Like function decorator , class decorator applies to a class definition.
+* They work by taking class an argument and returning a modified version of the class.
+* eg:This code demostrate taking the class and adds a class_name attribute to a class, storing class's name.
+
+```py
+def fun(cls):
+    cls.class_name=cls.__name__
+    return cls
+
+@fun
+class Person:
+    pass
+
+print(Person.class_name)
+
+```
+Output
+
+`
+Person
+`
+
+## 6. Built-in Decorators
+### 1. @staticmethod
+* It is used to **define a method** that doesn't operate on an instance of class (ie:**it doesn't use self**).Static methods are called class itself,not on an instance of class.
+* But you can call the staticmethod from instance too, but it will be tied with the class. so if you access a staticmethod  through instance ,under the hood it calls from the class.Best practice is call from class.
+
+```py
+
+class MethodOperation:
+    @staticmethod
+    def add(x,y):
+        return x+y
+
+res=MathOperations.add(5,3)
+print(res)
+
+```
+output
+```
+8
+```
+**Explanation:**
+
+* add is a static method defined with @staticmethod decorator.
+* It can be called directly on class MathOperations without creating an instance.
+
+### 2. @classmethod
+* Used to define a method that operates on class itself(ie: it uses cls).Class method can access and modify class state that applies across all instances of class.
+* * But you can call the classmethod from instacne too, but it will be tied with the class, so if you change somethig in the class through the classmethod ,the entire class property changes , not to specific to that instance.Best practice is call from a class.
+
+```py
+
+class Employee:
+    raise_amount = 1.05
+    def __init__(self, name, salary):
+        self.name = name
+        self.salary = salary
+        
+    @classmethod
+    def set_raise_amount(cls, amount):
+        cls.raise_amount = amount
+
+Employee.set_raise_amount(1.10)
+print(Employee.raise_amount)
+
+```
+
+|Method Type|What it receives automatically|What it can modify|Best Practice Call|
+|:---|:---|:---|:----|
+|Regular Instance Method|`self `(the specific instance)|The specific instance (`self.salary`)|`a.give_raise()`|
+|Class Method `(@classmethod)`|`cls` (the entire class)|The entire class state (`cls.raise_amount`)|`Employee.set_raise(1.1)`|
+|Static Method (`@staticmethod`)|Nothing automatically|Nothing, unless you hardcode a global/class name|`Employee.add(3, 5)`|
+
+### 3.@property
+
+* It is used to define a method as a propery, which allows methods treat like an propery.
+* This useful for encapsulating the implementation of the method and providing easy access as an attribute.
+
+Example : This code defines a circle class demonsrating @property for controlled attribute access, allowing safe updates.
+
+```py
+class Circle:
+
+   def __init__(self,radius):
+      self._radius=radius
+
+   @property
+   def radius(self):
+      return self._radius
+
+   @radius.setter
+   def radius(self,value):
+      if value>=0:
+         self._radius=value
+      else:
+         raise ValueError("Radius can't be negative")
+   
+   @property
+   def area(self):
+      return 3.14*(self._radius**2)
+
+c=Circle(5)
+print(c.radius)
+print(c.area)
+c.radius=10
+print(c.area)
+
+
+```
+
+output
+
+```
+75
+78.5397
+314.159
+```
+
+**Explanation**
+* radius and area are properties defined with @property decorator.
+* radius property also has a setter method to allow modification with validation.
+* These properties provide a way to access and modify private attributes while maintaining encapsulation.
+
+### 4.Chaining Multiple Decorators
+
+* Chainig decorators means applying multiple decorators to the same function.
+* Each decorator wraps the function in sequence, adding layered behavior
+
+```py
+def decor1(func):
+   def inner():
+      x=func()
+      return x*x
+   return inner
+
+def decor2(func):
+   def inner():
+      x=func()
+      return 2*x
+   return inner
+
+@decor2
+@decor1
+def num():
+   return 10
+
+@decor1
+@decor2
+def num2():
+   return 10
+
+print(num())
+print(num2())
+
+
+
+```
+output
+
+```
+400
+200
+```
+
+**Explanation**
+
+Explanation:
+
+* In num(), decor runs first -> 10 becomes 20, then decor1 squares it -> 400.
+* In num2(), decor1 runs first -> 10 becomes 100, then decor doubles it -> 200.
+
+## 7. Realworld uses of Decorators
+* **Logging**: Track function calls (eg:@logger)
+* **Authentication** : Restrict access in webapps (eg :Django @loginrequired)
+* **Rate Limiting** : Control API usage per user.
+* **Caching** : Store results using functools.lru_cache
+* **Retry Logic** : Automatically retries failed network calls.
+
+  
